@@ -42,6 +42,8 @@ signs:
       - loopback
       - --armor
       - --detach-sign
+      - --passphrase
+      - "{{ .Env.GPG_PASSPHRASE }}"
       - --local-user
       - "{{ .Env.GPG_FPR }}"
       - --output
