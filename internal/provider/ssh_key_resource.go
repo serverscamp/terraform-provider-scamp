@@ -10,8 +10,8 @@ import (
     rschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
     "github.com/hashicorp/terraform-plugin-framework/types"
 
-    "scamp/internal/client"
-    "scamp/internal/models"
+    "github.com/serverscamp/terraform-provider-scamp/internal/client"
+    "github.com/serverscamp/terraform-provider-scamp/internal/models"
 )
 
 type sshKeyResource struct{ c *client.Client }

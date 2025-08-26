@@ -13,8 +13,8 @@ import (
     "github.com/hashicorp/terraform-plugin-framework/types"
     "github.com/hashicorp/terraform-plugin-log/tflog"
 
-    "scamp/internal/client"
-    "scamp/internal/models"
+    "github.com/serverscamp/terraform-provider-scamp/internal/client"
+    "github.com/serverscamp/terraform-provider-scamp/internal/models"
 )
 
 type scampProvider struct{}

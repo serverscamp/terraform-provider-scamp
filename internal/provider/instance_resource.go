@@ -14,8 +14,8 @@ import (
     "github.com/hashicorp/terraform-plugin-framework/types"
     diag "github.com/hashicorp/terraform-plugin-framework/diag"
 
-    "scamp/internal/client"
-    "scamp/internal/models"
+    "github.com/serverscamp/terraform-provider-scamp/internal/client"
+    "github.com/serverscamp/terraform-provider-scamp/internal/models"
 )
 
 type instanceResource struct{ c *client.Client }

@@ -14,7 +14,7 @@ import (
 
     "github.com/hashicorp/terraform-plugin-log/tflog"
 
-    "scamp/internal/models"
+    "github.com/serverscamp/terraform-provider-scamp/internal/models"
 )
 
 const (
