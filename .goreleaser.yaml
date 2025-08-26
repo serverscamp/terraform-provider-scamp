@@ -1,3 +1,4 @@
+version: 2
 project_name: terraform-provider-scamp
 
 before:
@@ -34,6 +35,7 @@ checksum:
 signs:
   - artifacts: checksum
     cmd: gpg
+    signature: "${artifact}.sig"
     args:
       - --batch
       - --pinentry-mode
@@ -42,7 +44,9 @@ signs:
       - --detach-sign
       - --local-user
       - "{{ .Env.GPG_FPR }}"
-      - "{{ .ArtifactPath }}"
+      - --output
+      - "${signature}"
+      - "${artifact}"
 
 changelog:
   disable: true
