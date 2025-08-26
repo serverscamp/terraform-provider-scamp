@@ -40,7 +40,6 @@ signs:
       - --batch
       - --pinentry-mode
       - loopback
-      - --armor
       - --detach-sign
       - --passphrase
       - "{{ .Env.GPG_PASSPHRASE }}"
