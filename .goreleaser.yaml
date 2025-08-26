@@ -1,0 +1,48 @@
+project_name: terraform-provider-scamp
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: provider
+    main: ./main.go
+    binary: terraform-provider-scamp_v{{ .Version }}
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+
+archives:
+  - id: archives
+    builds:
+      - provider
+    format: zip
+    name_template: >-
+      terraform-provider-scamp_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+
+checksum:
+  name_template: "terraform-provider-scamp_{{ .Version }}_SHA256SUMS"
+
+signs:
+  - artifacts: checksum
+    cmd: gpg
+    args:
+      - --batch
+      - --pinentry-mode
+      - loopback
+      - --armor
+      - --detach-sign
+      - --local-user
+      - "{{ .Env.GPG_FPR }}"
+      - "{{ .ArtifactPath }}"
+
+changelog:
+  disable: true

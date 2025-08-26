@@ -1,0 +1,46 @@
+name: release
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      # Импорт GPG ключа из секретов
+      - name: Import GPG key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+          echo "use-agent" >> ~/.gnupg/gpg.conf
+          echo allow-loopback-pinentry >> ~/.gnupg/gpg-agent.conf
+          gpgconf --kill gpg-agent
+          gpg --batch --list-secret-keys
+
+      - name: Set GPG fingerprint
+        run: |
+          echo "GPG_FPR=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr:/ {print \$10; exit}')" >> $GITHUB_ENV
+
+      - name: Run Goreleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: latest
+          args: release --clean
+        env:
+          GPG_FPR: ${{ env.GPG_FPR }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
