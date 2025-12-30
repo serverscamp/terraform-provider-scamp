@@ -2,90 +2,66 @@ terraform {
   required_providers {
     scamp = {
       source  = "serverscamp/scamp"
-      version = "0.1.0"
+      version = "~> 0.2.0"
     }
   }
 }
 
 variable "scamp_token" {
-  description = "API token for SCAMP provider"
+  description = "API token for SCAMP provider (starts with sc_)"
   type        = string
   sensitive   = true
 }
 
 provider "scamp" {
-  api_key = var.scamp_token
+  token = var.scamp_token
 }
 
-data "scamp_flavors" "all_flavors" {}
-data "scamp_images" "all_images" {}
-data "scamp_limits" "all_limits" {}
-
-resource "scamp_ssh_key" "example_key_generated" {
-  name = "key-generated"
-  protected = false
+# Generate a new SSH key pair
+resource "scamp_ssh_key" "generated" {
+  key_name = "terraform-generated-key"
+  generate = true
 }
 
-resource "scamp_ssh_key" "example_key_imported" {
-  name       = "key-imported"
-  public_key = file("~/.ssh/id_rsa.pub")
-  protected  = false
+# Import an existing public key
+resource "scamp_ssh_key" "imported" {
+  key_name   = "terraform-imported-key"
+  public_key = file("~/.ssh/id_ed25519.pub")
 }
 
-locals {
-  sc_mini_id = one([
-    for f in data.scamp_flavors.all_flavors.items : f.id
-    if f.name == "sc-mini"
-  ])
-  ubuntu24_id = one([
-    for i in data.scamp_images.all_images.items : i.id
-    if lower(i.distro_family) == "ubuntu" && startswith(i.version, "24")
-  ])
+# Read an existing SSH key by ID
+data "scamp_ssh_key" "existing" {
+  id = scamp_ssh_key.generated.id
 }
 
-resource "scamp_instance" "example_vm1" {
-  name    = "example-tf1"
-  flavor  = local.sc_mini_id
-  image   = local.ubuntu24_id
-  ssh_key = scamp_ssh_key.example_key_imported.id
-  running = true
-  depends_on = [scamp_ssh_key.example_key_imported]
+# Outputs
+output "generated_key_id" {
+  description = "ID of the generated SSH key"
+  value       = scamp_ssh_key.generated.id
 }
 
-resource "scamp_instance" "example_vm2" {
-  name    = "example-tf2"
-  flavor  = local.sc_mini_id
-  image   = local.ubuntu24_id
-  ssh_key = scamp_ssh_key.example_key_imported.id
-  running = true
-  depends_on = [scamp_ssh_key.example_key_imported]
+output "generated_key_fingerprint" {
+  description = "Fingerprint of the generated SSH key"
+  value       = scamp_ssh_key.generated.fingerprint
 }
 
-resource "scamp_instance" "example_vm3" {
-  name    = "example-tf3"
-  flavor  = local.sc_mini_id
-  image   = local.ubuntu24_id
-  ssh_key = scamp_ssh_key.example_key_imported.id
-  running = true
-  depends_on = [scamp_ssh_key.example_key_imported]
+output "generated_public_key" {
+  description = "Public key of the generated SSH key"
+  value       = scamp_ssh_key.generated.public_key
 }
 
-output "example_vm1_ipv4" {
-  value = scamp_instance.example_vm1.ipv4
-}
-output "example_vm2_ipv4" {
-  value = scamp_instance.example_vm2.ipv4
-}
-output "example_vm3_ipv4" {
-  value = scamp_instance.example_vm3.ipv4
+output "generated_private_key" {
+  description = "Private key of the generated SSH key (sensitive)"
+  value       = scamp_ssh_key.generated.private_key
+  sensitive   = true
 }
 
-output "example_vm1_ipv6" {
-  value = scamp_instance.example_vm1.ipv6
+output "imported_key_id" {
+  description = "ID of the imported SSH key"
+  value       = scamp_ssh_key.imported.id
 }
-output "example_vm2_ipv6" {
-  value = scamp_instance.example_vm2.ipv6
-}
-output "example_vm3_ipv6" {
-  value = scamp_instance.example_vm3.ipv6
+
+output "imported_key_fingerprint" {
+  description = "Fingerprint of the imported SSH key"
+  value       = scamp_ssh_key.imported.fingerprint
 }

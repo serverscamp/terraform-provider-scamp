@@ -1,0 +1,11 @@
+# Binary
+terraform-provider-scamp
+
+# Test directory with tokens
+examples/test/
+
+# Terraform files
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
