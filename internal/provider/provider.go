@@ -83,11 +83,15 @@ func (p *scampProvider) Configure(ctx context.Context, req fwprov.ConfigureReque
 func (p *scampProvider) DataSources(_ context.Context) []func() fwds.DataSource {
 	return []func() fwds.DataSource{
 		NewSSHKeyDataSource,
+		NewNetworkDataSource,
+		NewRouterDataSource,
 	}
 }
 
 func (p *scampProvider) Resources(_ context.Context) []func() fwres.Resource {
 	return []func() fwres.Resource{
 		NewSSHKeyResource,
+		NewNetworkResource,
+		NewRouterResource,
 	}
 }

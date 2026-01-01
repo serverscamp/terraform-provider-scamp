@@ -16,6 +16,8 @@ import (
 const (
 	DefaultBaseURL = "https://platform.serverscamp.com/api/v1"
 	SSHKeysEP      = "/ssh-keys"
+	NetworksEP     = "/network"
+	RoutersEP      = "/router"
 )
 
 // Client wraps HTTP communication with the SCAMP API.

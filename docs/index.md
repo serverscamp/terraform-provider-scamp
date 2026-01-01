@@ -13,8 +13,8 @@ The SCAMP provider allows you to manage resources on the [ServersCamp](https://s
 
 The provider requires an API token for authentication. You can obtain a token by:
 
-1. Log in to the [SCAMP management panel](https://platform.serverscamp.com)
-2. Create an API token via `POST /api/v1/api-tokens` with body `{"name": "terraform", "expires_in_days": 365}`
+1. Log in to the [SCAMP management panel](https://sandbox.serverscamp.com)
+2. Create an API token
 3. Save the token from the response (it's shown only once)
 
 Tokens have the format `sc_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`.
