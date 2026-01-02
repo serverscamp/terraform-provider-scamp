@@ -14,10 +14,15 @@ import (
 )
 
 const (
-	DefaultBaseURL = "https://platform.serverscamp.com/api/v1"
-	SSHKeysEP      = "/ssh-keys"
-	NetworksEP     = "/network"
-	RoutersEP      = "/router"
+	DefaultBaseURL   = "https://platform.serverscamp.com/api/v1"
+	SSHKeysEP        = "/ssh-keys"
+	NetworksEP       = "/network"
+	RoutersEP        = "/router"
+	VMClassesEP      = "/vm-classes"
+	StorageClassesEP = "/storage-classes"
+	NetworkClassesEP = "/network-classes"
+	VMTemplatesEP    = "/vm-templates"
+	VMsEP            = "/vms"
 )
 
 // Client wraps HTTP communication with the SCAMP API.
