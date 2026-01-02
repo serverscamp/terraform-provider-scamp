@@ -85,6 +85,15 @@ func (p *scampProvider) DataSources(_ context.Context) []func() fwds.DataSource 
 		NewSSHKeyDataSource,
 		NewNetworkDataSource,
 		NewRouterDataSource,
+		NewVMClassesDataSource,
+		NewVMClassDataSource,
+		NewStorageClassesDataSource,
+		NewStorageClassDataSource,
+		NewNetworkClassesDataSource,
+		NewNetworkClassDataSource,
+		NewVMTemplatesDataSource,
+		NewVMTemplateDataSource,
+		NewVMDataSource,
 	}
 }
 
