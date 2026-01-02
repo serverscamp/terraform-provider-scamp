@@ -217,3 +217,48 @@ type VMCreateResponse struct {
 	PublicIPv4  string `json:"public_ip_v4"`
 	PublicIPv6  string `json:"public_ip_v6"`
 }
+
+// VolumeLimits represents I/O limits of a volume.
+type VolumeLimits struct {
+	ReadIOPSLimit       int `json:"read_iops_limit"`
+	WriteIOPSLimit      int `json:"write_iops_limit"`
+	ReadBandwidthLimit  int `json:"read_bandwidth_limit"`
+	WriteBandwidthLimit int `json:"write_bandwidth_limit"`
+}
+
+// Volume represents a volume from the API.
+type Volume struct {
+	ID             int           `json:"id"`
+	DiskUUID       string        `json:"disk_uuid"`
+	DisplayName    string        `json:"display_name"`
+	SizeGB         int           `json:"size_gb"`
+	StorageClassID int           `json:"storage_class_id"`
+	Limits         *VolumeLimits `json:"limits"`
+	SDSPoolName    string        `json:"sds_pool_name"`
+	VMUUID         *string       `json:"vm_uuid"` // null if not attached
+	State          string        `json:"state"`
+	CreatedAt      string        `json:"created_at,omitempty"`
+	UpdatedAt      string        `json:"updated_at,omitempty"`
+}
+
+// VolumesListResponse represents GET /volumes response.
+type VolumesListResponse struct {
+	Items []Volume `json:"items"`
+	Total int      `json:"total"`
+}
+
+// VolumeCreateResponse represents POST /volumes response.
+type VolumeCreateResponse struct {
+	ID          int    `json:"id"`
+	DiskUUID    string `json:"disk_uuid"`
+	DisplayName string `json:"display_name"`
+	SizeGB      int    `json:"size_gb"`
+	Status      string `json:"status"`
+}
+
+// VolumeAttachResponse represents POST /volumes/{uuid}/attach response.
+type VolumeAttachResponse struct {
+	DiskUUID string `json:"disk_uuid"`
+	VMUUID   string `json:"vm_uuid"`
+	Status   string `json:"status"`
+}

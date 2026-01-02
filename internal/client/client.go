@@ -23,6 +23,7 @@ const (
 	NetworkClassesEP = "/network-classes"
 	VMTemplatesEP    = "/vm-templates"
 	VMsEP            = "/vms"
+	VolumesEP        = "/volumes"
 )
 
 // Client wraps HTTP communication with the SCAMP API.
