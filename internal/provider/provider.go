@@ -104,5 +104,6 @@ func (p *scampProvider) Resources(_ context.Context) []func() fwres.Resource {
 		NewNetworkResource,
 		NewRouterResource,
 		NewVMResource,
+		NewVolumeResource,
 	}
 }
