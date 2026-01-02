@@ -94,6 +94,7 @@ func (p *scampProvider) DataSources(_ context.Context) []func() fwds.DataSource 
 		NewVMTemplatesDataSource,
 		NewVMTemplateDataSource,
 		NewVMDataSource,
+		NewVolumeDataSource,
 	}
 }
 
