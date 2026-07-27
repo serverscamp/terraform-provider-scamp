@@ -12,12 +12,6 @@ type SSHKey struct {
 	CreatedAt     string `json:"created_at"`
 }
 
-// SSHKeysListResponse represents GET /ssh-keys response.
-type SSHKeysListResponse struct {
-	Items []SSHKey `json:"items"`
-	Total int      `json:"total"`
-}
-
 // DeleteResponse represents DELETE response.
 type DeleteResponse struct {
 	Message string `json:"message"`
@@ -56,12 +50,6 @@ type Router struct {
 	IPv6Address string `json:"ipv6_address"`
 	Status      string `json:"status"`
 	CreatedAt   string `json:"created_at,omitempty"`
-}
-
-// RoutersListResponse represents GET /routers response.
-type RoutersListResponse struct {
-	Items []Router `json:"items"`
-	Total int      `json:"total"`
 }
 
 // VMClass represents a VM class from the API.
@@ -179,12 +167,6 @@ type VM struct {
 	UpdatedAt      string         `json:"updated_at,omitempty"`
 }
 
-// VMsListResponse represents GET /vms response.
-type VMsListResponse struct {
-	Items []VM `json:"items"`
-	Total int  `json:"total"`
-}
-
 // VMCreateResponse represents POST /vms response.
 type VMCreateResponse struct {
 	ID          int    `json:"id"`
@@ -223,12 +205,6 @@ type Volume struct {
 	UpdatedAt      string        `json:"updated_at,omitempty"`
 }
 
-// VolumesListResponse represents GET /volumes response.
-type VolumesListResponse struct {
-	Items []Volume `json:"items"`
-	Total int      `json:"total"`
-}
-
 // VolumeCreateResponse represents POST /volumes response.
 type VolumeCreateResponse struct {
 	ID          int    `json:"id"`
@@ -257,12 +233,6 @@ type FloatingIP struct {
 	VMUUID      *string `json:"vm_uuid"` // null if not attached
 	CreatedAt   string  `json:"created_at,omitempty"`
 	UpdatedAt   string  `json:"updated_at,omitempty"`
-}
-
-// FloatingIPsListResponse represents GET /floating-ips response.
-type FloatingIPsListResponse struct {
-	Items []FloatingIP `json:"items"`
-	Total int          `json:"total"`
 }
 
 // FloatingIPReserveResponse represents POST /floating-ips response.

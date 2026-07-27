@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -290,4 +291,23 @@ func (r *vmNetworkAttachmentResource) waitNicGone(ctx context.Context, vmUUID, i
 		})
 		time.Sleep(2 * time.Second)
 	}
+}
+
+// ImportState takes both ids, because an interface means nothing without the
+// VM it hangs off:
+//
+//	terraform import scamp_vm_network_attachment.second <vm-uuid>/<interface-id>
+//
+// Read fills network_id, the address and the MAC from the VM's live NIC list.
+func (r *vmNetworkAttachmentResource) ImportState(ctx context.Context, req tfresource.ImportStateRequest, resp *tfresource.ImportStateResponse) {
+	parts := strings.Split(strings.TrimSpace(req.ID), "/")
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		resp.Diagnostics.AddError(
+			"Invalid import id",
+			fmt.Sprintf("Expected \"<vm-uuid>/<interface-id>\", got %q.", req.ID),
+		)
+		return
+	}
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("vm_id"), parts[0])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), parts[1])...)
 }

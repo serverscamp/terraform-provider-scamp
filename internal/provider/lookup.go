@@ -179,3 +179,55 @@ func stripPrefixLen(addr string) string {
 	}
 	return addr
 }
+
+// ── reverse lookups ─────────────────────────────────────────────────────────
+//
+// Import goes the other way round: the platform hands back numeric class and
+// template ids, while the config is written with names. Without translating
+// them back, an imported VM plans as "replace" - every name attribute reads as
+// null against a config that spells them out.
+//
+// All three are best-effort: a class that no longer exists in the catalogue
+// leaves the name empty rather than failing the import, because the resource
+// itself is real and the user still wants it under management.
+
+func nameForVMClass(ctx context.Context, c *client.Client, id int) string {
+	var list models.VMClassesListResponse
+	if err := c.GetJSON(ctx, client.VMClassesEP, nil, &list); err != nil {
+		return ""
+	}
+	for _, it := range list.Items {
+		if it.ID == id {
+			return it.Name
+		}
+	}
+	return ""
+}
+
+func nameForStorageClass(ctx context.Context, c *client.Client, id int) string {
+	var list models.StorageClassesListResponse
+	if err := c.GetJSON(ctx, client.StorageClassesEP, nil, &list); err != nil {
+		return ""
+	}
+	for _, it := range list.Items {
+		if it.ID == id {
+			return it.Name
+		}
+	}
+	return ""
+}
+
+// nameForTemplate returns the slug ("ubuntu-26.04"), which is what `image`
+// takes and what the docs teach.
+func nameForTemplate(ctx context.Context, c *client.Client, id int) string {
+	var list models.VMTemplatesListResponse
+	if err := c.GetJSON(ctx, client.VMTemplatesEP, nil, &list); err != nil {
+		return ""
+	}
+	for _, it := range list.Items {
+		if it.ID == id {
+			return strings.TrimPrefix(it.APIName, "templates/")
+		}
+	}
+	return ""
+}

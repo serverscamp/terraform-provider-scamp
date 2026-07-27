@@ -7,7 +7,9 @@ import (
     "github.com/serverscamp/terraform-provider-scamp/internal/provider"
 )
 
-var version = "0.1.0"
+// version is stamped by goreleaser at build time (-ldflags "-X main.version").
+// The default only shows up in local builds.
+var version = "dev"
 
 func main() {
     ctx := context.Background()

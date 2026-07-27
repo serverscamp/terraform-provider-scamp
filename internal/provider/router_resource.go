@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	tfresource "github.com/hashicorp/terraform-plugin-framework/resource"
 	rschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -224,4 +225,11 @@ func (r *routerResource) Delete(ctx context.Context, req tfresource.DeleteReques
 		resp.Diagnostics.AddError("Failed to delete router", err.Error())
 		return
 	}
+}
+
+// ImportState brings an existing resource under management:
+//
+//	terraform import scamp_router.main <router-uuid>
+func (r *routerResource) ImportState(ctx context.Context, req tfresource.ImportStateRequest, resp *tfresource.ImportStateResponse) {
+	tfresource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }

@@ -527,7 +527,36 @@ func (r *vmResource) Read(ctx context.Context, req tfresource.ReadRequest, resp 
 	state.OSPassword = savedPassword
 	state.AssignPublicIPs = savedAssignPublicIPs
 
+	// After an import there is nothing in state but the id, so the name
+	// attributes are null while the config spells them out - which plans as a
+	// replacement of a live VM. Fill them in from the ids the API returned.
+	if state.VMClass.IsNull() || state.VMClass.ValueString() == "" {
+		if n := nameForVMClass(ctx, r.c, int(state.VMClassID.ValueInt64())); n != "" {
+			state.VMClass = types.StringValue(n)
+		}
+	}
+	if state.RootDiskClass.IsNull() || state.RootDiskClass.ValueString() == "" {
+		if n := nameForStorageClass(ctx, r.c, int(state.RootDiskClassID.ValueInt64())); n != "" {
+			state.RootDiskClass = types.StringValue(n)
+		}
+	}
+	if state.Image.IsNull() || state.Image.ValueString() == "" {
+		if n := nameForTemplate(ctx, r.c, int(state.VMTemplateID.ValueInt64())); n != "" {
+			state.Image = types.StringValue(n)
+		}
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+}
+
+// ImportState brings an existing VM under management:
+//
+//	terraform import scamp_vm.web <vm-uuid>
+//
+// Read fills the rest, including translating class and template ids back into
+// the names a config is written with.
+func (r *vmResource) ImportState(ctx context.Context, req tfresource.ImportStateRequest, resp *tfresource.ImportStateResponse) {
+	tfresource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
 func (r *vmResource) Update(ctx context.Context, req tfresource.UpdateRequest, resp *tfresource.UpdateResponse) {

@@ -334,7 +334,23 @@ func (r *volumeResource) Read(ctx context.Context, req tfresource.ReadRequest, r
 	}
 
 	r.setModelFromVolume(&state, &vol)
+	// Imported volumes arrive with only an id, so storage_class is null while
+	// the config names it. Translate the id back or every import plans a
+	// replacement of a disk that holds data.
+	if state.StorageClass.IsNull() || state.StorageClass.ValueString() == "" {
+		if n := nameForStorageClass(ctx, r.c, int(state.StorageClassID.ValueInt64())); n != "" {
+			state.StorageClass = types.StringValue(n)
+		}
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+}
+
+// ImportState brings an existing disk under management:
+//
+//	terraform import scamp_volume.data <volume-uuid>
+func (r *volumeResource) ImportState(ctx context.Context, req tfresource.ImportStateRequest, resp *tfresource.ImportStateResponse) {
+	tfresource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
 func (r *volumeResource) Update(ctx context.Context, req tfresource.UpdateRequest, resp *tfresource.UpdateResponse) {

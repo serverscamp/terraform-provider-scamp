@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	tfresource "github.com/hashicorp/terraform-plugin-framework/resource"
 	rschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -392,4 +393,11 @@ func (r *networkResource) waitGone(ctx context.Context, uuid string, timeout tim
 		})
 		time.Sleep(2 * time.Second)
 	}
+}
+
+// ImportState brings an existing resource under management:
+//
+//	terraform import scamp_network.internal <network-uuid>
+func (r *networkResource) ImportState(ctx context.Context, req tfresource.ImportStateRequest, resp *tfresource.ImportStateResponse) {
+	tfresource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }

@@ -19,7 +19,8 @@ builds:
       - amd64
       - arm64
     ldflags:
-      - -s -w
+      # main.version is only meaningful when it is stamped here.
+      - -s -w -X main.version={{.Version}}
 
 archives:
   - id: archives

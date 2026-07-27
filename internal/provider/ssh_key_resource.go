@@ -2,9 +2,11 @@ package provider
 
 import (
 	"context"
+	"strconv"
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	tfresource "github.com/hashicorp/terraform-plugin-framework/resource"
 	rschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
@@ -65,7 +67,7 @@ func (r *sshKeyResource) Schema(_ context.Context, _ tfresource.SchemaRequest, r
 			"private_key": rschema.StringAttribute{
 				Computed:    true,
 				Sensitive:   true,
-				Description: "Private key in PEM format. Only available for generated keys, returned only once at creation.",
+				Description: "Private key in PEM format, for generated keys only. Returned once, at creation, and never again - store it before the apply finishes or the key pair is lost. Sensitive: keep it out of plain outputs and state you do not control.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -86,7 +88,7 @@ func (r *sshKeyResource) Schema(_ context.Context, _ tfresource.SchemaRequest, r
 			},
 			"has_private_key": rschema.BoolAttribute{
 				Computed:    true,
-				Description: "Whether the server stores the private key (true for generated keys).",
+				Description: "Always false: the platform never keeps a private key, not even for the ones it generates. A generated key is handed back once, at creation, and is unrecoverable afterwards.",
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.UseStateForUnknown(),
 				},
@@ -265,4 +267,24 @@ func (r *sshKeyResource) Delete(ctx context.Context, req tfresource.DeleteReques
 		resp.Diagnostics.AddError("Failed to delete SSH key", err.Error())
 		return
 	}
+}
+
+// ImportState brings an existing key under management:
+//
+//	terraform import scamp_ssh_key.main 42
+//
+// The id is numeric here, unlike every other resource, so the passthrough
+// helper cannot be used - it would write a string into an int64 attribute.
+// private_key stays empty: the platform only ever returns it once, at
+// creation, and an imported key has no way back to it.
+func (r *sshKeyResource) ImportState(ctx context.Context, req tfresource.ImportStateRequest, resp *tfresource.ImportStateResponse) {
+	id, err := strconv.ParseInt(strings.TrimSpace(req.ID), 10, 64)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Invalid import id",
+			fmt.Sprintf("SSH keys are imported by their numeric id, got %q.", req.ID),
+		)
+		return
+	}
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), id)...)
 }

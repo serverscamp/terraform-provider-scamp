@@ -299,3 +299,10 @@ func (r *floatingIPResource) Delete(ctx context.Context, req tfresource.DeleteRe
 		return
 	}
 }
+
+// ImportState brings an existing resource under management:
+//
+//	terraform import scamp_floating_ip.web <floating-ip-uuid>
+func (r *floatingIPResource) ImportState(ctx context.Context, req tfresource.ImportStateRequest, resp *tfresource.ImportStateResponse) {
+	tfresource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
