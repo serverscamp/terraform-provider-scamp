@@ -80,6 +80,7 @@ func (r *volumeResource) Schema(_ context.Context, _ tfresource.SchemaRequest, r
 				Description: "ID of the storage class. Resolved from storage_class when that is set instead.",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.RequiresReplace(),
+					int64planmodifier.UseStateForUnknown(),
 				},
 			},
 			"storage_class": rschema.StringAttribute{

@@ -67,6 +67,7 @@ func (r *vmNetworkAttachmentResource) Schema(_ context.Context, _ tfresource.Sch
 					"deliberately moving the default route.",
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.RequiresReplace(),
+					boolplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"ip_internal": rschema.StringAttribute{

@@ -104,6 +104,7 @@ func (r *vmResource) Schema(_ context.Context, _ tfresource.SchemaRequest, resp 
 				Description: "ID of the VM class (CPU, memory configuration). Resolved from vm_class when that is set instead.",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.RequiresReplace(),
+					int64planmodifier.UseStateForUnknown(),
 				},
 			},
 			"vm_class": rschema.StringAttribute{
@@ -119,6 +120,7 @@ func (r *vmResource) Schema(_ context.Context, _ tfresource.SchemaRequest, resp 
 				Description: "ID of the storage class for root disk (IOPS, bandwidth). Resolved from root_disk_class when that is set instead.",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.RequiresReplace(),
+					int64planmodifier.UseStateForUnknown(),
 				},
 			},
 			"root_disk_class": rschema.StringAttribute{
@@ -134,6 +136,7 @@ func (r *vmResource) Schema(_ context.Context, _ tfresource.SchemaRequest, resp 
 				Description: "ID of the VM template (OS image). Resolved from image when that is set instead.",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.RequiresReplace(),
+					int64planmodifier.UseStateForUnknown(),
 				},
 			},
 			"image": rschema.StringAttribute{
@@ -151,6 +154,7 @@ func (r *vmResource) Schema(_ context.Context, _ tfresource.SchemaRequest, resp 
 					"be deleted from the panel.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"ssh_key_id": rschema.Int64Attribute{
@@ -526,6 +530,15 @@ func (r *vmResource) Read(ctx context.Context, req tfresource.ReadRequest, resp 
 	// Restore preserved fields
 	state.OSPassword = savedPassword
 	state.AssignPublicIPs = savedAssignPublicIPs
+
+	// Except after an import, where there is nothing to preserve: the flag is
+	// not returned by the API, but it is visible in the outcome - a VM with a
+	// public address was created with it on. Leaving it null makes the first
+	// plan after an import show a change on a machine nobody touched.
+	if state.AssignPublicIPs.IsNull() {
+		state.AssignPublicIPs = types.BoolValue(
+			vm.Network != nil && (vm.Network.PublicIPv4 != "" || vm.Network.PublicIPv6 != ""))
+	}
 
 	// After an import there is nothing in state but the id, so the name
 	// attributes are null while the config spells them out - which plans as a
