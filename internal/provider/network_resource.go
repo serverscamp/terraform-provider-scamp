@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	tfresource "github.com/hashicorp/terraform-plugin-framework/resource"
@@ -355,5 +356,40 @@ func (r *networkResource) Delete(ctx context.Context, req tfresource.DeleteReque
 	if err := r.c.Delete(ctx, fmt.Sprintf("%s/%s", client.NetworksEP, uuid)); err != nil {
 		resp.Diagnostics.AddError("Failed to delete network", err.Error())
 		return
+	}
+
+	// The call only queues the delete. Returning here reported success for a
+	// network that was still up - and Terraform then dropped it from state, so
+	// the leftover kept billing with nothing left to manage it. Wait for the
+	// platform to actually let go of it.
+	if err := r.waitGone(ctx, uuid, 5*time.Minute); err != nil {
+		resp.Diagnostics.AddError("Failed to delete network", err.Error())
+	}
+}
+
+// waitGone polls until the network is really gone. A network that comes back
+// with a status_error is a refusal, not a delay: report it and keep the
+// resource in state, because it still exists and still costs money.
+func (r *networkResource) waitGone(ctx context.Context, uuid string, timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	for {
+		var net models.Network
+		err := r.c.GetJSON(ctx, fmt.Sprintf("%s/%s", client.NetworksEP, uuid), nil, &net)
+		if err != nil {
+			if strings.Contains(err.Error(), "http 404") {
+				return nil // gone, which is what we asked for
+			}
+			return err
+		}
+		if net.StatusError != nil && *net.StatusError != "" {
+			return fmt.Errorf("network %s was not deleted: %s", uuid, *net.StatusError)
+		}
+		if time.Now().After(deadline) {
+			return fmt.Errorf("timeout waiting for network %s to be deleted (status: %s)", uuid, net.Status)
+		}
+		tflog.Debug(ctx, "Waiting for network to disappear", map[string]any{
+			"uuid": uuid, "status": net.Status,
+		})
+		time.Sleep(2 * time.Second)
 	}
 }

@@ -20,10 +20,10 @@ const (
 	RoutersEP        = "/router"
 	VMClassesEP      = "/vm-classes"
 	StorageClassesEP = "/storage-classes"
-	NetworkClassesEP = "/network-classes"
 	VMTemplatesEP    = "/vm-templates"
 	VMsEP            = "/vms"
 	VolumesEP        = "/volumes"
+	FloatingIPsEP    = "/floating-ips"
 )
 
 // Client wraps HTTP communication with the SCAMP API.

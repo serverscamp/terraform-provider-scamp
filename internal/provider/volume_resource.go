@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	tfresource "github.com/hashicorp/terraform-plugin-framework/resource"
 	rschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
@@ -25,6 +26,26 @@ func NewVolumeResource() tfresource.Resource { return &volumeResource{} }
 
 func (r *volumeResource) Metadata(_ context.Context, _ tfresource.MetadataRequest, resp *tfresource.MetadataResponse) {
 	resp.TypeName = "scamp_volume"
+}
+
+// ValidateConfig: name or id, never both and never neither - same rule the VM
+// resource applies to its class and image.
+func (r *volumeResource) ValidateConfig(ctx context.Context, req tfresource.ValidateConfigRequest, resp *tfresource.ValidateConfigResponse) {
+	var cfg volumeModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &cfg)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	hasName := !cfg.StorageClass.IsNull() && (cfg.StorageClass.IsUnknown() || cfg.StorageClass.ValueString() != "")
+	hasID := !cfg.StorageClassID.IsNull()
+	if hasName && hasID {
+		resp.Diagnostics.AddError("Both storage_class and storage_class_id are set",
+			"Set one of them: storage_class is the readable form, storage_class_id pins an id.")
+	}
+	if !hasName && !hasID {
+		resp.Diagnostics.AddError("Neither storage_class nor storage_class_id is set",
+			"Set storage_class (recommended, e.g. storage_class = \"R2\") or storage_class_id.")
+	}
 }
 
 func (r *volumeResource) Schema(_ context.Context, _ tfresource.SchemaRequest, resp *tfresource.SchemaResponse) {
@@ -54,10 +75,18 @@ func (r *volumeResource) Schema(_ context.Context, _ tfresource.SchemaRequest, r
 				},
 			},
 			"storage_class_id": rschema.Int64Attribute{
-				Required:    true,
-				Description: "ID of the storage class.",
+				Optional:    true,
+				Computed:    true,
+				Description: "ID of the storage class. Resolved from storage_class when that is set instead.",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.RequiresReplace(),
+				},
+			},
+			"storage_class": rschema.StringAttribute{
+				Optional:    true,
+				Description: "Name of the storage class, e.g. R2 or W3. Case does not matter. Use this or storage_class_id.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"attached_vm_id": rschema.StringAttribute{
@@ -115,6 +144,7 @@ type volumeModel struct {
 	DisplayName         types.String `tfsdk:"display_name"`
 	SizeGB              types.Int64  `tfsdk:"size_gb"`
 	StorageClassID      types.Int64  `tfsdk:"storage_class_id"`
+	StorageClass        types.String `tfsdk:"storage_class"`
 	AttachedVMID        types.String `tfsdk:"attached_vm_id"`
 	State               types.String `tfsdk:"state"`
 	SDSPoolName         types.String `tfsdk:"sds_pool_name"`
@@ -151,6 +181,10 @@ func (r *volumeResource) setModelFromVolume(m *volumeModel, vol *models.Volume) 
 	}
 }
 
+// volumeReadyStates are every name the platform uses for "exists and is not
+// attached to anything": public-api's own, plus the controller's two.
+var volumeReadyStates = []string{"created", "provisioned", "detached"}
+
 func (r *volumeResource) waitForVolumeState(ctx context.Context, uuid string, targetStates []string, timeout time.Duration) (*models.Volume, error) {
 	deadline := time.Now().Add(timeout)
 	for {
@@ -179,6 +213,16 @@ func (r *volumeResource) waitForVolumeState(ctx context.Context, uuid string, ta
 	}
 }
 
+// readVolume is the one-shot read used when an error path still needs to leave
+// a complete resource in state.
+func (r *volumeResource) readVolume(ctx context.Context, uuid string) (*models.Volume, error) {
+	var vol models.Volume
+	if err := r.c.GetJSON(ctx, fmt.Sprintf("%s/%s", client.VolumesEP, uuid), nil, &vol); err != nil {
+		return nil, err
+	}
+	return &vol, nil
+}
+
 func (r *volumeResource) Create(ctx context.Context, req tfresource.CreateRequest, resp *tfresource.CreateResponse) {
 	var plan volumeModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -186,9 +230,19 @@ func (r *volumeResource) Create(ctx context.Context, req tfresource.CreateReques
 		return
 	}
 
+	classID := plan.StorageClassID.ValueInt64()
+	if !plan.StorageClass.IsNull() && plan.StorageClass.ValueString() != "" {
+		id, err := resolveStorageClass(ctx, r.c, plan.StorageClass.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddError("Could not resolve storage_class", err.Error())
+			return
+		}
+		classID = int64(id)
+	}
+
 	payload := map[string]any{
 		"size_gb":          plan.SizeGB.ValueInt64(),
-		"storage_class_id": plan.StorageClassID.ValueInt64(),
+		"storage_class_id": classID,
 	}
 
 	if !plan.DisplayName.IsNull() && plan.DisplayName.ValueString() != "" {
@@ -207,7 +261,22 @@ func (r *volumeResource) Create(ctx context.Context, req tfresource.CreateReques
 	wantAttachVMID := plan.AttachedVMID
 
 	// Wait for volume to become provisioned
-	vol, err := r.waitForVolumeState(ctx, createResp.DiskUUID, []string{"provisioned"}, 5*time.Minute)
+	// The volume exists from here on, whatever happens next. Put its id in
+	// state immediately: if the wait or the attach below fails, Terraform still
+	// knows about the resource and a later destroy removes it. Returning an
+	// error without this left a real, billable volume that no state file
+	// referenced - invisible to the user and to terraform destroy alike.
+	plan.ID = types.StringValue(createResp.DiskUUID)
+	resp.State.SetAttribute(ctx, path.Root("id"), plan.ID)
+
+	// A ready, unattached volume answers with any of three names, and which one
+	// you get is not stable: the API returns its own bookkeeping state while the
+	// request is still in flight ("created"), then hands over to the controller,
+	// which calls the same disk "provisioned" when fresh and "detached" once it
+	// has been attached to something before. Waiting for a single one of them
+	// hangs for the full timeout on a volume that has been ready for minutes.
+	// (The API schema's "provisioning, available, attached" is wrong throughout.)
+	vol, err := r.waitForVolumeState(ctx, createResp.DiskUUID, volumeReadyStates, 5*time.Minute)
 	if err != nil {
 		resp.Diagnostics.AddWarning("Volume created but not yet available", err.Error())
 	} else {
@@ -221,6 +290,12 @@ func (r *volumeResource) Create(ctx context.Context, req tfresource.CreateReques
 		}
 		var attachResp models.VolumeAttachResponse
 		if err := r.c.PostJSON(ctx, fmt.Sprintf("%s/%s/attach", client.VolumesEP, createResp.DiskUUID), attachPayload, &attachResp); err != nil {
+			// Save what we know before failing: the volume is created, only the
+			// attach did not happen.
+			if vol, rerr := r.readVolume(ctx, createResp.DiskUUID); rerr == nil {
+				r.setModelFromVolume(&plan, vol)
+				resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+			}
 			resp.Diagnostics.AddError("Failed to attach volume to VM", err.Error())
 			return
 		}
@@ -285,7 +360,7 @@ func (r *volumeResource) Update(ctx context.Context, req tfresource.UpdateReques
 				return
 			}
 			// Wait for detached/provisioned state
-			_, err := r.waitForVolumeState(ctx, uuid, []string{"provisioned", "detached"}, 5*time.Minute)
+			_, err := r.waitForVolumeState(ctx, uuid, volumeReadyStates, 5*time.Minute)
 			if err != nil {
 				resp.Diagnostics.AddWarning("Volume detached but state not confirmed", err.Error())
 			}
@@ -339,7 +414,7 @@ func (r *volumeResource) Delete(ctx context.Context, req tfresource.DeleteReques
 			return
 		}
 		// Wait for detached/provisioned state
-		_, err := r.waitForVolumeState(ctx, uuid, []string{"provisioned", "detached"}, 5*time.Minute)
+		_, err := r.waitForVolumeState(ctx, uuid, volumeReadyStates, 5*time.Minute)
 		if err != nil {
 			resp.Diagnostics.AddWarning("Volume detach not confirmed, proceeding with delete", err.Error())
 		}

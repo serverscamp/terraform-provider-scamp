@@ -38,6 +38,15 @@ func (d *storageClassDataSource) Schema(_ context.Context, _ fwds.SchemaRequest,
 				Computed:    true,
 				Description: "Description of the storage class.",
 			},
+			"min_size_gb": dsschema.Int64Attribute{
+				Computed: true,
+				Description: "Smallest volume this class accepts. Classes differ (25, 50, 100, " +
+					"250 GB), and a smaller size is rejected on apply.",
+			},
+			"free_size_gb": dsschema.Int64Attribute{
+				Computed:    true,
+				Description: "Root-disk allowance included with a VM at no charge (0 = none).",
+			},
 			"max_size_gb": dsschema.Int64Attribute{
 				Computed:    true,
 				Description: "Maximum disk size in GB.",
@@ -81,6 +90,8 @@ type storageClassDataSourceModel struct {
 	Name                     types.String  `tfsdk:"name"`
 	ID                       types.Int64   `tfsdk:"id"`
 	Description              types.String  `tfsdk:"description"`
+	MinSizeGB                types.Int64   `tfsdk:"min_size_gb"`
+	FreeSizeGB               types.Int64   `tfsdk:"free_size_gb"`
 	MaxSizeGB                types.Int64   `tfsdk:"max_size_gb"`
 	ReadIOPSLimit            types.Int64   `tfsdk:"read_iops_limit"`
 	WriteIOPSLimit           types.Int64   `tfsdk:"write_iops_limit"`
@@ -113,6 +124,8 @@ func (d *storageClassDataSource) Read(ctx context.Context, req fwds.ReadRequest,
 		if item.Name == name {
 			config.ID = types.Int64Value(int64(item.ID))
 			config.Description = types.StringValue(item.Description)
+			config.MinSizeGB = types.Int64Value(int64(item.MinSizeGB))
+			config.FreeSizeGB = types.Int64Value(int64(item.FreeSizeGB))
 			config.MaxSizeGB = types.Int64Value(int64(item.MaxSizeGB))
 			config.ReadIOPSLimit = types.Int64Value(int64(item.ReadIOPSLimit))
 			config.WriteIOPSLimit = types.Int64Value(int64(item.WriteIOPSLimit))

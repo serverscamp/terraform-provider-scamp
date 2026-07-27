@@ -46,10 +46,6 @@ func (d *vmDataSource) Schema(_ context.Context, _ fwds.SchemaRequest, resp *fwd
 				Computed:    true,
 				Description: "ID of the storage class for root disk.",
 			},
-			"primary_network_class_id": dsschema.Int64Attribute{
-				Computed:    true,
-				Description: "ID of the network class for primary network.",
-			},
 			"vm_template_id": dsschema.Int64Attribute{
 				Computed:    true,
 				Description: "ID of the VM template.",
@@ -123,7 +119,6 @@ type vmDataSourceModel struct {
 	VMName           types.String `tfsdk:"vm_name"`
 	VMClassID        types.Int64  `tfsdk:"vm_class_id"`
 	RootDiskClassID       types.Int64  `tfsdk:"root_disk_class_id"`
-	PrimaryNetworkClassID types.Int64  `tfsdk:"primary_network_class_id"`
 	VMTemplateID     types.Int64  `tfsdk:"vm_template_id"`
 	PrimaryNetworkID types.String `tfsdk:"primary_network_id"`
 	SSHKeyID         types.Int64  `tfsdk:"ssh_key_id"`
@@ -161,7 +156,6 @@ func (d *vmDataSource) Read(ctx context.Context, req fwds.ReadRequest, resp *fwd
 	config.VMName = types.StringValue(vm.VMName)
 	config.VMClassID = types.Int64Value(int64(vm.VMClassID))
 	config.RootDiskClassID = types.Int64Value(int64(vm.StorageClassID))
-	config.PrimaryNetworkClassID = types.Int64Value(int64(vm.NetworkClassID))
 	config.VMTemplateID = types.Int64Value(int64(vm.VMTemplateID))
 	config.PrimaryNetworkID = types.StringValue(vm.NetworkUUID)
 	config.RootDiskGB = types.Int64Value(int64(vm.DiskGB))
@@ -179,10 +173,10 @@ func (d *vmDataSource) Read(ctx context.Context, req fwds.ReadRequest, resp *fwd
 	}
 
 	if vm.Network != nil {
-		config.IPInternal = types.StringValue(vm.Network.IPInternal)
-		config.IPv6Address = types.StringValue(vm.Network.IPv6Address)
-		config.PublicIPv4 = types.StringValue(vm.Network.PublicIPv4)
-		config.PublicIPv6 = types.StringValue(vm.Network.PublicIPv6)
+		config.IPInternal = types.StringValue(stripPrefixLen(vm.Network.IPInternal))
+		config.IPv6Address = types.StringValue(stripPrefixLen(vm.Network.IPv6Address))
+		config.PublicIPv4 = types.StringValue(stripPrefixLen(vm.Network.PublicIPv4))
+		config.PublicIPv6 = types.StringValue(stripPrefixLen(vm.Network.PublicIPv6))
 	} else {
 		config.IPInternal = types.StringNull()
 		config.IPv6Address = types.StringNull()

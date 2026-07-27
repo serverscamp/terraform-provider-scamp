@@ -3,8 +3,10 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	tfresource "github.com/hashicorp/terraform-plugin-framework/resource"
 	rschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -28,6 +30,55 @@ func (r *vmResource) Metadata(_ context.Context, _ tfresource.MetadataRequest, r
 	resp.TypeName = "scamp_vm"
 }
 
+// ValidateConfig keeps the readable name and the raw id mutually exclusive:
+// exactly one of each pair must be set. Without it a config could name a class
+// and pin an id pointing somewhere else, and the id would silently win.
+//
+// Written by hand rather than pulling in terraform-plugin-framework-validators:
+// three checks are not worth a new dependency in a published provider.
+func (r *vmResource) ValidateConfig(ctx context.Context, req tfresource.ValidateConfigRequest, resp *tfresource.ValidateConfigResponse) {
+	var cfg vmModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &cfg)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// A value that is still unknown at validate time (comes from a variable or
+	// another resource) counts as set: we cannot see it yet, and it will be
+	// there by apply.
+	set := func(name types.String, id types.Int64) (bool, bool) {
+		hasName := !name.IsNull() && (name.IsUnknown() || name.ValueString() != "")
+		hasID := !id.IsNull()
+		return hasName, hasID
+	}
+
+	for _, pair := range []struct {
+		nameAttr, idAttr string
+		name             types.String
+		id               types.Int64
+	}{
+		{"vm_class", "vm_class_id", cfg.VMClass, cfg.VMClassID},
+		{"root_disk_class", "root_disk_class_id", cfg.RootDiskClass, cfg.RootDiskClassID},
+		{"image", "vm_template_id", cfg.Image, cfg.VMTemplateID},
+	} {
+		hasName, hasID := set(pair.name, pair.id)
+		switch {
+		case hasName && hasID:
+			resp.Diagnostics.AddError(
+				fmt.Sprintf("Both %s and %s are set", pair.nameAttr, pair.idAttr),
+				fmt.Sprintf("Set one of them. %s is the readable form and is resolved against the catalogue; "+
+					"%s pins a specific id.", pair.nameAttr, pair.idAttr),
+			)
+		case !hasName && !hasID:
+			resp.Diagnostics.AddError(
+				fmt.Sprintf("Neither %s nor %s is set", pair.nameAttr, pair.idAttr),
+				fmt.Sprintf("Set %s (recommended, e.g. vm_class = \"bs-burst-xs\") or %s.",
+					pair.nameAttr, pair.idAttr),
+			)
+		}
+	}
+}
+
 func (r *vmResource) Schema(_ context.Context, _ tfresource.SchemaRequest, resp *tfresource.SchemaResponse) {
 	resp.Schema = rschema.Schema{
 		Description: "Manages a virtual machine in SCAMP.",
@@ -48,36 +99,56 @@ func (r *vmResource) Schema(_ context.Context, _ tfresource.SchemaRequest, resp 
 				},
 			},
 			"vm_class_id": rschema.Int64Attribute{
-				Required:    true,
-				Description: "ID of the VM class (CPU, memory configuration).",
+				Optional:    true,
+				Computed:    true,
+				Description: "ID of the VM class (CPU, memory configuration). Resolved from vm_class when that is set instead.",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.RequiresReplace(),
+				},
+			},
+			"vm_class": rschema.StringAttribute{
+				Optional:    true,
+				Description: "Name of the VM class, e.g. bs-burst-xs or hf-m. Use this or vm_class_id.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"root_disk_class_id": rschema.Int64Attribute{
-				Required:    true,
-				Description: "ID of the storage class for root disk (IOPS, bandwidth).",
+				Optional:    true,
+				Computed:    true,
+				Description: "ID of the storage class for root disk (IOPS, bandwidth). Resolved from root_disk_class when that is set instead.",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.RequiresReplace(),
 				},
 			},
-			"primary_network_class_id": rschema.Int64Attribute{
-				Required:    true,
-				Description: "ID of the network class for primary network (speed, traffic).",
-				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.RequiresReplace(),
+			"root_disk_class": rschema.StringAttribute{
+				Optional:    true,
+				Description: "Name of the storage class for the root disk, e.g. R1. Use this or root_disk_class_id.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"vm_template_id": rschema.Int64Attribute{
-				Required:    true,
-				Description: "ID of the VM template (OS image).",
+				Optional:    true,
+				Computed:    true,
+				Description: "ID of the VM template (OS image). Resolved from image when that is set instead.",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.RequiresReplace(),
 				},
 			},
+			"image": rschema.StringAttribute{
+				Optional:    true,
+				Description: "OS image, by slug (ubuntu-26.04, debian-13) or display name (Ubuntu 26.04 LTS). Case does not matter, and a unique substring works. Use this or vm_template_id.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
 			"primary_network_id": rschema.StringAttribute{
-				Required:    true,
-				Description: "ID (UUID) of the primary network to attach the VM to.",
+				Optional: true,
+				Computed: true,
+				Description: "UUID of the network the VM sits on. Leave it out and the VM joins the "  +
+					"organisation's default-network, the one provisioned with the account that cannot "  +
+					"be deleted from the panel.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -113,6 +184,18 @@ func (r *vmResource) Schema(_ context.Context, _ tfresource.SchemaRequest, resp 
 				Description: "Assign public IPv4/IPv6 addresses (default: false).",
 				PlanModifiers: []planmodifier.Bool{
 					// No RequiresReplace - could be changed in future
+				},
+			},
+			"security_group_id": rschema.StringAttribute{
+				Optional: true,
+				Description: "UUID of the security group the VM joins. Omit it and the platform " +
+					"picks the organisation's default group, which is what the panel does too. " +
+					"Changing it re-creates the VM: moving a running VM between groups is done " +
+					"through the security group itself, not from here. Not Computed on purpose - " +
+					"the API takes this on create but never reports it back on a VM, so an omitted " +
+					"value stays null instead of claiming a group we cannot verify.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"description": rschema.StringAttribute{
@@ -205,14 +288,17 @@ type vmModel struct {
 	ID               types.String `tfsdk:"id"`
 	DisplayName      types.String `tfsdk:"display_name"`
 	VMClassID        types.Int64  `tfsdk:"vm_class_id"`
+	VMClass          types.String `tfsdk:"vm_class"`
 	RootDiskClassID        types.Int64  `tfsdk:"root_disk_class_id"`
-	PrimaryNetworkClassID  types.Int64  `tfsdk:"primary_network_class_id"`
+	RootDiskClass          types.String `tfsdk:"root_disk_class"`
 	VMTemplateID     types.Int64  `tfsdk:"vm_template_id"`
+	Image            types.String `tfsdk:"image"`
 	PrimaryNetworkID types.String `tfsdk:"primary_network_id"`
 	SSHKeyID         types.Int64  `tfsdk:"ssh_key_id"`
 	RootDiskGB       types.Int64  `tfsdk:"root_disk_gb"`
 	OSPassword       types.String `tfsdk:"os_password"`
 	AssignPublicIPs  types.Bool   `tfsdk:"assign_public_ips"`
+	SecurityGroupID  types.String `tfsdk:"security_group_id"`
 	Description      types.String `tfsdk:"description"`
 	Tags             types.Map    `tfsdk:"tags"`
 	// Computed
@@ -238,7 +324,6 @@ func (r *vmResource) setModelFromVM(m *vmModel, vm *models.VM) {
 	m.RootDiskGB = types.Int64Value(int64(vm.DiskGB))
 	m.VMClassID = types.Int64Value(int64(vm.VMClassID))
 	m.RootDiskClassID = types.Int64Value(int64(vm.StorageClassID))
-	m.PrimaryNetworkClassID = types.Int64Value(int64(vm.NetworkClassID))
 	m.VMTemplateID = types.Int64Value(int64(vm.VMTemplateID))
 	m.PrimaryNetworkID = types.StringValue(vm.NetworkUUID)
 	m.OSUser = types.StringValue(vm.OSUser)
@@ -255,32 +340,54 @@ func (r *vmResource) setModelFromVM(m *vmModel, vm *models.VM) {
 	}
 
 	if vm.Network != nil {
-		m.IPInternal = types.StringValue(vm.Network.IPInternal)
-		m.IPv6Address = types.StringValue(vm.Network.IPv6Address)
-		m.PublicIPv4 = types.StringValue(vm.Network.PublicIPv4)
-		m.PublicIPv6 = types.StringValue(vm.Network.PublicIPv6)
+		// The API returns addresses with their prefix ("194.110.174.110/24").
+		// A netmask has no business in an output that feeds DNS records, ssh
+		// commands or firewall rules, so it is stripped here.
+		m.IPInternal = types.StringValue(stripPrefixLen(vm.Network.IPInternal))
+		m.IPv6Address = types.StringValue(stripPrefixLen(vm.Network.IPv6Address))
+		m.PublicIPv4 = types.StringValue(stripPrefixLen(vm.Network.PublicIPv4))
+		m.PublicIPv6 = types.StringValue(stripPrefixLen(vm.Network.PublicIPv6))
 	}
 }
 
-func (r *vmResource) waitForVMRunning(ctx context.Context, uuid string, timeout time.Duration) (*models.VM, error) {
+// waitForVMReady waits for a VM that is actually usable, not merely started.
+//
+// The domain reports "running" several seconds before the control plane has
+// finished with it: vm_name arrives with the create reconcile, and public
+// addresses are attached after that. Returning on "running" alone is why an
+// apply used to hand back an empty name and an empty public IP for a VM that
+// had both a minute later.
+func (r *vmResource) waitForVMReady(ctx context.Context, uuid string, wantPublicIP bool, timeout time.Duration) (*models.VM, error) {
 	deadline := time.Now().Add(timeout)
+	var last models.VM
 	for {
 		var vm models.VM
-		err := r.c.GetJSON(ctx, fmt.Sprintf("%s/%s", client.VMsEP, uuid), nil, &vm)
-		if err != nil {
+		if err := r.c.GetJSON(ctx, fmt.Sprintf("%s/%s", client.VMsEP, uuid), nil, &vm); err != nil {
 			return nil, err
 		}
-		if vm.State == "running" {
+		last = vm
+
+		running := vm.State == "running"
+		named := vm.VMName != ""
+		addressed := !wantPublicIP || (vm.Network != nil && vm.Network.PublicIPv4 != "")
+		if running && named && addressed {
 			return &vm, nil
 		}
+
 		if time.Now().After(deadline) {
-			return &vm, fmt.Errorf("timeout waiting for VM %s to start (state: %s)", uuid, vm.State)
+			switch {
+			case !running:
+				return &last, fmt.Errorf("timeout waiting for VM %s to start (state: %s)", uuid, vm.State)
+			case !named:
+				return &last, fmt.Errorf("VM %s is running but has no name yet", uuid)
+			default:
+				return &last, fmt.Errorf("VM %s is running but no public IP was attached yet", uuid)
+			}
 		}
-		tflog.Debug(ctx, "Waiting for VM to start", map[string]any{
-			"uuid":  uuid,
-			"state": vm.State,
+		tflog.Debug(ctx, "Waiting for VM to be ready", map[string]any{
+			"uuid": uuid, "state": vm.State, "named": named, "addressed": addressed,
 		})
-		time.Sleep(1 * time.Second)
+		time.Sleep(2 * time.Second)
 	}
 }
 
@@ -291,17 +398,61 @@ func (r *vmResource) Create(ctx context.Context, req tfresource.CreateRequest, r
 		return
 	}
 
+	// Names win when both are given? No - the schema forbids that pair, so at
+	// this point exactly one of each is set. Resolve the readable one.
+	vmClassID := plan.VMClassID.ValueInt64()
+	if !plan.VMClass.IsNull() && plan.VMClass.ValueString() != "" {
+		id, err := resolveVMClass(ctx, r.c, plan.VMClass.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddError("Could not resolve vm_class", err.Error())
+			return
+		}
+		vmClassID = int64(id)
+	}
+
+	diskClassID := plan.RootDiskClassID.ValueInt64()
+	if !plan.RootDiskClass.IsNull() && plan.RootDiskClass.ValueString() != "" {
+		id, err := resolveStorageClass(ctx, r.c, plan.RootDiskClass.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddError("Could not resolve root_disk_class", err.Error())
+			return
+		}
+		diskClassID = int64(id)
+	}
+
+	templateID := plan.VMTemplateID.ValueInt64()
+	if !plan.Image.IsNull() && plan.Image.ValueString() != "" {
+		id, err := resolveTemplate(ctx, r.c, plan.Image.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddError("Could not resolve image", err.Error())
+			return
+		}
+		templateID = int64(id)
+	}
+
+	networkUUID := plan.PrimaryNetworkID.ValueString()
+	if plan.PrimaryNetworkID.IsNull() || plan.PrimaryNetworkID.IsUnknown() || networkUUID == "" {
+		uuid, err := resolveDefaultNetwork(ctx, r.c)
+		if err != nil {
+			resp.Diagnostics.AddError("Could not pick a network", err.Error())
+			return
+		}
+		networkUUID = uuid
+	}
+
 	payload := map[string]any{
-		"vm_class_id":      plan.VMClassID.ValueInt64(),
-		"storage_class_id": plan.RootDiskClassID.ValueInt64(),
-		"network_class_id": plan.PrimaryNetworkClassID.ValueInt64(),
-		"vm_template_id":   plan.VMTemplateID.ValueInt64(),
-		"network_uuid":     plan.PrimaryNetworkID.ValueString(),
+		"vm_class_id":      vmClassID,
+		"storage_class_id": diskClassID,
+		"vm_template_id":   templateID,
+		"network_uuid":     networkUUID,
 		"disk_gb":          plan.RootDiskGB.ValueInt64(),
 	}
 
 	if !plan.DisplayName.IsNull() && plan.DisplayName.ValueString() != "" {
 		payload["display_name"] = plan.DisplayName.ValueString()
+	}
+	if !plan.SecurityGroupID.IsNull() && !plan.SecurityGroupID.IsUnknown() {
+		payload["sg_uuid"] = plan.SecurityGroupID.ValueString()
 	}
 	if !plan.SSHKeyID.IsNull() {
 		payload["ssh_key_id"] = plan.SSHKeyID.ValueInt64()
@@ -319,15 +470,20 @@ func (r *vmResource) Create(ctx context.Context, req tfresource.CreateRequest, r
 		return
 	}
 
-	// Save initial data from create response
+	// Save initial data from create response. The id goes into state right here,
+	// before any waiting: a VM that exists but whose wait timed out must still be
+	// something terraform destroy can remove. Without it a slow provision left a
+	// running, billable VM that no state file referenced.
 	plan.ID = types.StringValue(createResp.VMUUID)
+	resp.State.SetAttribute(ctx, path.Root("id"), plan.ID)
 	plan.VMName = types.StringValue(createResp.VMName)
 	plan.OSUser = types.StringValue(createResp.OSUser)
 	plan.OSPassword = types.StringValue(createResp.OSPassword)
 	plan.Status = types.StringValue(createResp.Status)
 
 	// Wait for VM to start running
-	activeVM, err := r.waitForVMRunning(ctx, createResp.VMUUID, 5*time.Minute)
+	wantPublicIP := !plan.AssignPublicIPs.IsNull() && plan.AssignPublicIPs.ValueBool()
+	activeVM, err := r.waitForVMReady(ctx, createResp.VMUUID, wantPublicIP, 5*time.Minute)
 	if err != nil {
 		resp.Diagnostics.AddWarning("VM created but not yet active", err.Error())
 	} else {
@@ -399,5 +555,37 @@ func (r *vmResource) Delete(ctx context.Context, req tfresource.DeleteRequest, r
 	if err := r.c.Delete(ctx, fmt.Sprintf("%s/%s", client.VMsEP, uuid)); err != nil {
 		resp.Diagnostics.AddError("Failed to delete VM", err.Error())
 		return
+	}
+
+	// The DELETE only queues the work: the platform tears the domain down and
+	// releases its disks, IPs and NIC afterwards. Returning here would report
+	// success for something not done yet - and if it then failed, the VM would
+	// live on with nothing tracking it. Wait for it to actually disappear.
+	if err := r.waitForVMGone(ctx, uuid, 10*time.Minute); err != nil {
+		resp.Diagnostics.AddError("VM delete did not complete", err.Error())
+	}
+}
+
+// waitForVMGone polls until the VM reads back as 404. Anything else - still
+// there, or an error - keeps it in state, which is the safe direction: a
+// resource Terraform still knows about can be retried, an orphan cannot.
+func (r *vmResource) waitForVMGone(ctx context.Context, uuid string, timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	for {
+		var vm models.VM
+		err := r.c.GetJSON(ctx, fmt.Sprintf("%s/%s", client.VMsEP, uuid), nil, &vm)
+		if err != nil {
+			if strings.Contains(err.Error(), "http 404") {
+				return nil
+			}
+			return fmt.Errorf("could not confirm the VM is gone: %w", err)
+		}
+		if time.Now().After(deadline) {
+			return fmt.Errorf("timeout waiting for VM %s to be deleted (status: %s)", uuid, vm.Status)
+		}
+		tflog.Debug(ctx, "Waiting for VM to disappear", map[string]any{
+			"uuid": uuid, "status": vm.Status,
+		})
+		time.Sleep(2 * time.Second)
 	}
 }
