@@ -279,3 +279,46 @@ type VMNetworkAttachResponse struct {
 	MACAddress  string `json:"mac_address"`
 	IsPrimary   bool   `json:"is_primary"`
 }
+
+// Simple VPS
+
+type VPSPlan struct {
+	ID           string   `json:"id"`
+	Name         string   `json:"name"`
+	VCPU         int      `json:"vcpu"`
+	RAMGB        float64  `json:"ram_gb"`
+	DiskGB       int      `json:"disk_gb"`
+	TrafficGB    int      `json:"traffic_gb"`
+	NetMbit      int      `json:"net_mbit"`
+	PriceMonthly float64  `json:"price_monthly"`
+	BackupShare  float64  `json:"backup_share"`
+	CPULimit     *float64 `json:"cpu_limit"`
+}
+
+type VPSImage struct {
+	ID      string `json:"id"`
+	OS      string `json:"os"`
+	Version string `json:"version"`
+}
+
+type VPS struct {
+	UUID       string `json:"vps_uuid"`
+	Name       string `json:"name"`
+	PlanID     string `json:"plan_id"`
+	Image      string `json:"image"`
+	Backups    bool   `json:"backups"`
+	Status     string `json:"status"`
+	IPv4       string `json:"ipv4"`
+	IPv6Prefix string `json:"ipv6_prefix"`
+	PTR        string `json:"ptr"`
+	PTRCustom  bool   `json:"ptr_custom"`
+	CPUModel   string `json:"cpu_model"`
+	Error      string `json:"error"`
+	CreatedAt  string `json:"created_at"`
+	Uptime     *int64 `json:"uptime"`
+}
+
+type VPSCreated struct {
+	UUID     string `json:"vps_uuid"`
+	Hostname string `json:"hostname"`
+}

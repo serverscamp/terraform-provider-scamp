@@ -93,6 +93,8 @@ func (p *scampProvider) DataSources(_ context.Context) []func() fwds.DataSource 
 		NewVMTemplateDataSource,
 		NewVMDataSource,
 		NewVolumeDataSource,
+		NewVPSPlansDataSource,
+		NewVPSImagesDataSource,
 	}
 }
 
@@ -105,5 +107,6 @@ func (p *scampProvider) Resources(_ context.Context) []func() fwres.Resource {
 		NewVolumeResource,
 		NewFloatingIPResource,
 		NewVMNetworkAttachmentResource,
+		NewVPSResource,
 	}
 }

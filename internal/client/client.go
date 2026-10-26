@@ -24,6 +24,7 @@ const (
 	VMsEP            = "/vms"
 	VolumesEP        = "/volumes"
 	FloatingIPsEP    = "/floating-ips"
+	VPSEP            = "/vps"
 )
 
 // Client wraps HTTP communication with the SCAMP API.
@@ -64,10 +65,16 @@ func (c *Client) buildURL(ep string, q url.Values) (string, error) {
 type APIError struct {
 	Message string `json:"message"`
 	Error   string `json:"error"`
+	Detail  any    `json:"detail"` // FastAPI: a string, or a list of field errors
 }
 
 // doJSON performs HTTP request with JSON body and returns response.
 func (c *Client) doJSON(ctx context.Context, method, fullURL string, payload any) ([]byte, int, error) {
+	return c.doJSONWith(ctx, method, fullURL, payload, nil)
+}
+
+// doJSONWith is doJSON with extra request headers (Idempotency-Key).
+func (c *Client) doJSONWith(ctx context.Context, method, fullURL string, payload any, headers map[string]string) ([]byte, int, error) {
 	var body io.Reader
 	if payload != nil {
 		b, err := json.Marshal(payload)
@@ -91,6 +98,9 @@ func (c *Client) doJSON(ctx context.Context, method, fullURL string, payload any
 		req.Header.Set("Content-Type", "application/json")
 	}
 	req.Header.Set("Accept", "application/json")
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
 
 	resp, err := c.http.Do(req)
 	if err != nil {
@@ -113,6 +123,9 @@ func (c *Client) doJSON(ctx context.Context, method, fullURL string, payload any
 		}
 		if apiErr.Error != "" {
 			return nil, resp.StatusCode, fmt.Errorf("http %d: %s", resp.StatusCode, apiErr.Error)
+		}
+		if d, ok := apiErr.Detail.(string); ok && d != "" {
+			return nil, resp.StatusCode, fmt.Errorf("http %d: %s", resp.StatusCode, d)
 		}
 		return nil, resp.StatusCode, fmt.Errorf("http %d: %s", resp.StatusCode, string(rb))
 	}
@@ -140,6 +153,22 @@ func (c *Client) PostJSON(ctx context.Context, ep string, payload any, out any) 
 		return err
 	}
 	b, _, err := c.doJSON(ctx, http.MethodPost, u, payload)
+	if err != nil {
+		return err
+	}
+	if out == nil {
+		return nil
+	}
+	return json.Unmarshal(b, out)
+}
+
+// PostJSONWith is PostJSON with extra request headers.
+func (c *Client) PostJSONWith(ctx context.Context, ep string, payload any, headers map[string]string, out any) error {
+	u, err := c.buildURL(ep, nil)
+	if err != nil {
+		return err
+	}
+	b, _, err := c.doJSONWith(ctx, http.MethodPost, u, payload, headers)
 	if err != nil {
 		return err
 	}
