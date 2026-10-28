@@ -5,7 +5,7 @@ resource "scamp_ssh_key" "laptop" {
 
 resource "scamp_vps" "web" {
   name        = "web-1"
-  plan        = "vps2-1"
+  plan        = "vps-std-1g"
   image       = "debian-13"
   ssh_key_ids = [scamp_ssh_key.laptop.id]
   backups     = true

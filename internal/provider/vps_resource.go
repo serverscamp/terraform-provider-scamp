@@ -70,7 +70,7 @@ func (r *vpsResource) Schema(_ context.Context, _ tfresource.SchemaRequest, resp
 			},
 			"plan": rschema.StringAttribute{
 				Required:    true,
-				Description: "Plan id, e.g. vps2-1 (see the scamp_vps_plans data source). Changed in place to a bigger plan, the server restarts; a smaller plan is refused because the disk cannot shrink.",
+				Description: "Plan id, e.g. vps-std-1g (see the scamp_vps_plans data source). Changed in place to a bigger plan, the server restarts; a smaller plan is refused because the disk cannot shrink.",
 			},
 			"image": rschema.StringAttribute{
 				Required:      true,

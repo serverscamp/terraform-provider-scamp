@@ -20,7 +20,7 @@ resource "scamp_ssh_key" "laptop" {
 
 resource "scamp_vps" "web" {
   name        = "web-1"
-  plan        = "vps2-1"
+  plan        = "vps-std-1g"
   image       = "debian-13"
   ssh_key_ids = [scamp_ssh_key.laptop.id]
   backups     = true
@@ -38,7 +38,7 @@ output "web_ipv4" {
 
 - `image` (String) Image id, e.g. debian-13 (see the scamp_vps_images data source). Changing it replaces the server.
 - `name` (String) Name of the server: 3 to 24 lowercase letters, digits and hyphens, starting with a letter. Changing it replaces the server.
-- `plan` (String) Plan id, e.g. vps2-1 (see the scamp_vps_plans data source). Changed in place to a bigger plan, the server restarts; a smaller plan is refused because the disk cannot shrink.
+- `plan` (String) Plan id, e.g. vps-std-1g (see the scamp_vps_plans data source). Changed in place to a bigger plan, the server restarts; a smaller plan is refused because the disk cannot shrink.
 
 ### Optional
 
