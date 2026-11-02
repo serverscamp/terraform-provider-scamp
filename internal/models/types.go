@@ -322,3 +322,94 @@ type VPSCreated struct {
 	UUID     string `json:"vps_uuid"`
 	Hostname string `json:"hostname"`
 }
+
+// One-Click Apps (managed apps)
+
+type AppSize struct {
+	ID      int64  `json:"id"`
+	Name    string `json:"name"`
+	CPUMode string `json:"cpu_mode"`
+	HWSlug  string `json:"hw_slug"`
+	SoldOut bool   `json:"sold_out"`
+	Locked  bool   `json:"locked"`
+}
+
+type AppKind struct {
+	Key         string   `json:"key"`
+	Hardware    string   `json:"hardware"`
+	Available   bool     `json:"available"`
+	CPUModes    []string `json:"cpu_modes"`
+	MinMemoryMB int64    `json:"min_memory_mb"`
+}
+
+type AppCatalog struct {
+	Apps  []AppKind `json:"apps"`
+	Sizes []struct {
+		AppSize
+		MemoryMB int64 `json:"memory_mb"`
+	} `json:"sizes"`
+}
+
+type ManagedApp struct {
+	ID       string  `json:"id"`
+	App      string  `json:"app"`
+	Name     string  `json:"name"`
+	Hostname string  `json:"hostname"`
+	URL      string  `json:"url"`
+	VMUUID   *string `json:"vm_uuid"`
+	Plan     *string `json:"plan"`
+	IPv4     *string `json:"ipv4"`
+	IPv6     *string `json:"ipv6"`
+	Public   bool    `json:"public"`
+	State    string  `json:"state"`
+	Error    *string `json:"error"`
+	AppUser  string  `json:"app_user"`
+}
+
+type ManagedAppPasswords struct {
+	App struct {
+		User     string  `json:"user"`
+		Password *string `json:"password"`
+	} `json:"app"`
+}
+
+// Vault
+
+type VaultPackage struct {
+	ID         int64  `json:"id"`
+	Slug       string `json:"slug"`
+	Name       string `json:"name"`
+	MaxSecrets int64  `json:"max_secrets"`
+	SoldOut    bool   `json:"sold_out"`
+}
+
+type Vault struct {
+	ID        string        `json:"id"`
+	Name      string        `json:"name"`
+	Host      string        `json:"host"`
+	URL       string        `json:"url"`
+	State     string        `json:"state"`
+	Error     *string       `json:"error"`
+	IP        *string       `json:"ip"`
+	PrivateIP *string       `json:"private_ip"`
+	Package   *VaultPackage `json:"package"`
+	GrowUpTo  *VaultPackage `json:"grow_up_to"`
+	Network   string        `json:"network_uuid"`
+}
+
+type VaultSecret struct {
+	Name    string `json:"name"`
+	Value   string `json:"value"`
+	Version int64  `json:"version"`
+}
+
+// VPN Gateway
+
+type VPNDevice struct {
+	ID         int64  `json:"id"`
+	Name       string `json:"name"`
+	Address    string `json:"address"`
+	FullTunnel bool   `json:"full_tunnel"`
+	PublicKey  string `json:"public_key"`
+	Config     string `json:"config"`
+}

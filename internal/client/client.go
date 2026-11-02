@@ -25,6 +25,9 @@ const (
 	VolumesEP        = "/volumes"
 	FloatingIPsEP    = "/floating-ips"
 	VPSEP            = "/vps"
+	ManagedAppsEP    = "/managed-apps"
+	VaultEP          = "/vault"
+	NetsvcEP         = "/netsvc"
 )
 
 // Client wraps HTTP communication with the SCAMP API.
@@ -169,6 +172,22 @@ func (c *Client) PostJSONWith(ctx context.Context, ep string, payload any, heade
 		return err
 	}
 	b, _, err := c.doJSONWith(ctx, http.MethodPost, u, payload, headers)
+	if err != nil {
+		return err
+	}
+	if out == nil {
+		return nil
+	}
+	return json.Unmarshal(b, out)
+}
+
+// PutJSON performs PUT request with payload and unmarshals response into out.
+func (c *Client) PutJSON(ctx context.Context, ep string, payload any, out any) error {
+	u, err := c.buildURL(ep, nil)
+	if err != nil {
+		return err
+	}
+	b, _, err := c.doJSON(ctx, http.MethodPut, u, payload)
 	if err != nil {
 		return err
 	}

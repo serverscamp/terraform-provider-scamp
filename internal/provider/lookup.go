@@ -2,9 +2,12 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/serverscamp/terraform-provider-scamp/internal/client"
 	"github.com/serverscamp/terraform-provider-scamp/internal/models"
@@ -168,6 +171,35 @@ func resolveDefaultNetwork(ctx context.Context, c *client.Client) (string, error
 	sort.Strings(names)
 	return "", fmt.Errorf("no %q network and more than one to choose from (%s); set primary_network_id",
 		defaultNetworkName, strings.Join(names, ", "))
+}
+
+// networkOrDefault is the network named in the config, or the default one. Routers and networks stay
+// out of Terraform for now: resources that need one take the account's default unless told otherwise.
+func networkOrDefault(ctx context.Context, c *client.Client, v types.String) (string, error) {
+	if !v.IsNull() && !v.IsUnknown() && v.ValueString() != "" {
+		return v.ValueString(), nil
+	}
+	id, err := resolveDefaultNetwork(ctx, c)
+	if err != nil {
+		return "", errors.New(strings.Replace(err.Error(), "primary_network_id", "network_id", 1))
+	}
+	return id, nil
+}
+
+// defaultRouter is the router of the default network.
+func defaultRouter(ctx context.Context, c *client.Client) (string, error) {
+	nid, err := networkOrDefault(ctx, c, types.StringNull())
+	if err != nil {
+		return "", err
+	}
+	var n models.Network
+	if err := c.GetJSON(ctx, client.NetworksEP+"/"+nid, nil, &n); err != nil {
+		return "", fmt.Errorf("could not read the default network: %w", err)
+	}
+	if n.RouterUUID == nil || *n.RouterUUID == "" {
+		return "", fmt.Errorf("the default network has no router; set router_id")
+	}
+	return *n.RouterUUID, nil
 }
 
 // stripPrefixLen drops the CIDR suffix the API attaches to addresses:

@@ -108,5 +108,9 @@ func (p *scampProvider) Resources(_ context.Context) []func() fwres.Resource {
 		NewFloatingIPResource,
 		NewVMNetworkAttachmentResource,
 		NewVPSResource,
+		NewManagedAppResource,
+		NewVaultResource,
+		NewVaultSecretResource,
+		NewVPNDeviceResource,
 	}
 }
