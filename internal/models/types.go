@@ -361,6 +361,7 @@ type ManagedApp struct {
 	IPv4     *string `json:"ipv4"`
 	IPv6     *string `json:"ipv6"`
 	Public   bool    `json:"public"`
+	Private  *string `json:"private_ip"`
 	State    string  `json:"state"`
 	Error    *string `json:"error"`
 	AppUser  string  `json:"app_user"`
@@ -371,6 +372,10 @@ type ManagedAppPasswords struct {
 		User     string  `json:"user"`
 		Password *string `json:"password"`
 	} `json:"app"`
+	Server struct {
+		User     string  `json:"user"`
+		Password *string `json:"password"`
+	} `json:"server"`
 }
 
 // Vault

@@ -47,6 +47,9 @@ type managedAppModel struct {
 	AdminPassword   types.String `tfsdk:"admin_password"`
 	IPv4            types.String `tfsdk:"ipv4"`
 	IPv6            types.String `tfsdk:"ipv6"`
+	PrivateIP       types.String `tfsdk:"private_ip"`
+	SSHUser         types.String `tfsdk:"ssh_user"`
+	SSHPassword     types.String `tfsdk:"ssh_password"`
 	VMID            types.String `tfsdk:"vm_id"`
 	State           types.String `tfsdk:"state"`
 }
@@ -127,6 +130,18 @@ func (r *managedAppResource) Schema(_ context.Context, _ tfresource.SchemaReques
 			"ipv6": rschema.StringAttribute{
 				Computed: true, Description: "Public IPv6, empty when public is off.",
 			},
+			"private_ip": rschema.StringAttribute{
+				Computed: true, Description: "The server's address in its network: SSH and the app over VPN Gateway.",
+			},
+			"ssh_user": rschema.StringAttribute{
+				Computed: true, Description: "The server's user for SSH, with sudo.", PlanModifiers: keep,
+			},
+			"ssh_password": rschema.StringAttribute{
+				Computed:      true,
+				Sensitive:     true,
+				Description:   "The password of ssh_user, as the server was made with it.",
+				PlanModifiers: keep,
+			},
 			"vm_id": rschema.StringAttribute{
 				Computed: true, Description: "UUID of the app's server.", PlanModifiers: keep,
 			},
@@ -180,6 +195,7 @@ func setFromApp(m *managedAppModel, a *models.ManagedApp) {
 	m.AdminUser = types.StringValue(a.AppUser)
 	m.IPv4 = strOrNull(a.IPv4)
 	m.IPv6 = strOrNull(a.IPv6)
+	m.PrivateIP = strOrNull(a.Private)
 	m.VMID = strOrNull(a.VMUUID)
 	m.State = types.StringValue(a.State)
 	// while the server is made it has no address yet; once it has one, public follows it
@@ -270,12 +286,23 @@ func (r *managedAppResource) waitRunning(ctx context.Context, id string) (*model
 	}
 }
 
-func (r *managedAppResource) password(ctx context.Context, id string) types.String {
+// passwords fills the app administrator's first password and the server's SSH user and password.
+// What the API does not give keeps its value.
+func (r *managedAppResource) passwords(ctx context.Context, m *managedAppModel) {
 	var pw models.ManagedAppPasswords
-	if err := r.c.GetJSON(ctx, client.ManagedAppsEP+"/"+id+"/password", nil, &pw); err != nil || pw.App.Password == nil {
-		return types.StringNull()
+	if err := r.c.GetJSON(ctx, client.ManagedAppsEP+"/"+m.ID.ValueString()+"/password", nil, &pw); err != nil {
+		tflog.Debug(ctx, "app passwords not read", map[string]any{"error": err.Error()})
+		return
 	}
-	return types.StringValue(*pw.App.Password)
+	if pw.App.Password != nil {
+		m.AdminPassword = types.StringValue(*pw.App.Password)
+	}
+	if pw.Server.User != "" {
+		m.SSHUser = types.StringValue(pw.Server.User)
+	}
+	if pw.Server.Password != nil {
+		m.SSHPassword = types.StringValue(*pw.Server.Password)
+	}
 }
 
 func (r *managedAppResource) Create(ctx context.Context, req tfresource.CreateRequest, resp *tfresource.CreateResponse) {
@@ -325,6 +352,7 @@ func (r *managedAppResource) Create(ctx context.Context, req tfresource.CreateRe
 	plan.URL = types.StringValue(created.URL)
 	plan.State = types.StringValue("creating")
 	plan.AdminUser, plan.AdminPassword = types.StringNull(), types.StringNull()
+	plan.SSHUser, plan.SSHPassword, plan.PrivateIP = types.StringNull(), types.StringNull(), types.StringNull()
 	plan.IPv4, plan.IPv6, plan.VMID = types.StringNull(), types.StringNull(), types.StringNull()
 	// saved before the wait, so an app that fails to install is still in the state and destroy removes it
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
@@ -332,7 +360,7 @@ func (r *managedAppResource) Create(ctx context.Context, req tfresource.CreateRe
 	a, err := r.waitRunning(ctx, created.ID)
 	if a != nil && a.ID != "" {
 		setFromApp(&plan, a)
-		plan.AdminPassword = r.password(ctx, created.ID)
+		r.passwords(ctx, &plan)
 		resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 	}
 	if err != nil {
@@ -360,8 +388,8 @@ func (r *managedAppResource) Read(ctx context.Context, req tfresource.ReadReques
 		return
 	}
 	setFromApp(&state, a)
-	if state.AdminPassword.IsNull() {
-		state.AdminPassword = r.password(ctx, a.ID)
+	if state.AdminPassword.IsNull() || state.SSHPassword.IsNull() {
+		r.passwords(ctx, &state)
 	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
@@ -398,7 +426,7 @@ func (r *managedAppResource) Update(ctx context.Context, req tfresource.UpdateRe
 		resp.Diagnostics.AddError("Failed to read the app", err.Error())
 		return
 	}
-	plan.AdminPassword = state.AdminPassword
+	plan.AdminPassword, plan.SSHUser, plan.SSHPassword = state.AdminPassword, state.SSHUser, state.SSHPassword
 	setFromApp(&plan, a)
 	plan.Public = types.BoolValue(a.Public)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
