@@ -4,9 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/serverscamp/terraform-provider-scamp/internal/client"
@@ -171,6 +174,19 @@ func resolveDefaultNetwork(ctx context.Context, c *client.Client) (string, error
 	sort.Strings(names)
 	return "", fmt.Errorf("no %q network and more than one to choose from (%s); set primary_network_id",
 		defaultNetworkName, strings.Join(names, ", "))
+}
+
+// serviceName is the name rule of apps, vaults and storage boxes: it becomes the start of their address.
+var serviceName = regexp.MustCompile(`^[a-z][a-z0-9-]{1,30}[a-z0-9]$`)
+
+const serviceNameRule = "3 to 32 lowercase letters, digits and hyphens, starting with a letter and not ending with a hyphen."
+
+// checkServiceName adds an error to the name when the config sets one that the API would refuse.
+func checkServiceName(v types.String, diags *diag.Diagnostics) {
+	if v.IsNull() || v.IsUnknown() || serviceName.MatchString(v.ValueString()) {
+		return
+	}
+	diags.AddAttributeError(path.Root("name"), "Bad name", fmt.Sprintf("%q: %s", v.ValueString(), serviceNameRule))
 }
 
 // networkOrDefault is the network named in the config, or the default one. Routers and networks stay

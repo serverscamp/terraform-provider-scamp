@@ -418,3 +418,33 @@ type VPNDevice struct {
 	PublicKey  string `json:"public_key"`
 	Config     string `json:"config"`
 }
+
+// Storage Box
+
+type StoragePackage struct {
+	ID      int64  `json:"id"`
+	Slug    string `json:"slug"`
+	Name    string `json:"name"`
+	SizeGB  int64  `json:"size_gb"`
+	SoldOut bool   `json:"sold_out"`
+}
+
+type StorageBox struct {
+	ID        string          `json:"id"`
+	Name      string          `json:"name"`
+	Host      string          `json:"host"`
+	State     string          `json:"state"`
+	Error     *string         `json:"error"`
+	IP        *string         `json:"ip"`
+	PrivateIP *string         `json:"private_ip"`
+	Package   *StoragePackage `json:"package"`
+	GrowUpTo  *StoragePackage `json:"grow_up_to"`
+	Protocols []any           `json:"protocols"`
+	Network   string          `json:"network_uuid"`
+}
+
+type StorageLogin struct {
+	Password  *string `json:"password"`
+	AccessKey *string `json:"access_key"`
+	S3Secret  *string `json:"s3_secret"`
+}

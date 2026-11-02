@@ -28,6 +28,7 @@ const (
 	ManagedAppsEP    = "/managed-apps"
 	VaultEP          = "/vault"
 	NetsvcEP         = "/netsvc"
+	StorageEP        = "/storage"
 )
 
 // Client wraps HTTP communication with the SCAMP API.

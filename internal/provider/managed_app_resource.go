@@ -158,6 +158,7 @@ func (r *managedAppResource) ValidateConfig(ctx context.Context, req tfresource.
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	checkServiceName(cfg.Name, &resp.Diagnostics)
 	if v := cfg.Maintenance; !v.IsNull() && !v.IsUnknown() && v.ValueString() != "manual" && v.ValueString() != "off" {
 		resp.Diagnostics.AddAttributeError(path.Root("maintenance"), "Unknown maintenance", "Use manual or off.")
 	}

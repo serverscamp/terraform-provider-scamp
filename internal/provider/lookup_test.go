@@ -82,3 +82,12 @@ func TestStripPrefixLen(t *testing.T) {
 		}
 	}
 }
+
+func TestServiceName(t *testing.T) {
+	for name, ok := range map[string]bool{"pw": false, "pwg": true, "git-1": true, "Git": false, "1git": false, "git-": false,
+		"a234567890123456789012345678901b": true, "a2345678901234567890123456789012c": false} {
+		if serviceName.MatchString(name) != ok {
+			t.Errorf("%q: want %v", name, ok)
+		}
+	}
+}

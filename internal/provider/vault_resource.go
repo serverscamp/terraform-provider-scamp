@@ -97,6 +97,15 @@ func (r *vaultResource) Schema(_ context.Context, _ tfresource.SchemaRequest, re
 	}
 }
 
+func (r *vaultResource) ValidateConfig(ctx context.Context, req tfresource.ValidateConfigRequest, resp *tfresource.ValidateConfigResponse) {
+	var cfg vaultModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &cfg)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	checkServiceName(cfg.Name, &resp.Diagnostics)
+}
+
 func (r *vaultResource) Configure(_ context.Context, req tfresource.ConfigureRequest, _ *tfresource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
