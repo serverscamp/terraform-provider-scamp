@@ -113,5 +113,11 @@ func (p *scampProvider) Resources(_ context.Context) []func() fwres.Resource {
 		NewVaultSecretResource,
 		NewVPNDeviceResource,
 		NewStorageBoxResource,
+		NewKubernetesClusterResource,
+		NewDatabaseResource,
+		NewBrokerResource,
+		NewDatabaseDBResource,
+		NewDatabaseUserResource,
+		NewBrokerUserResource,
 	}
 }

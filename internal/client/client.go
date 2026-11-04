@@ -29,6 +29,9 @@ const (
 	VaultEP          = "/vault"
 	NetsvcEP         = "/netsvc"
 	StorageEP        = "/storage"
+	KubernetesEP     = "/kubernetes"
+	DatabasesEP      = "/databases"
+	BrokersEP        = "/brokers"
 )
 
 // Client wraps HTTP communication with the SCAMP API.
@@ -196,6 +199,42 @@ func (c *Client) PutJSON(ctx context.Context, ep string, payload any, out any) e
 		return nil
 	}
 	return json.Unmarshal(b, out)
+}
+
+// PatchJSON performs PATCH with a JSON body.
+func (c *Client) PatchJSON(ctx context.Context, ep string, payload any, out any) error {
+	u, err := c.buildURL(ep, nil)
+	if err != nil {
+		return err
+	}
+	b, _, err := c.doJSON(ctx, http.MethodPatch, u, payload)
+	if err != nil {
+		return err
+	}
+	if out == nil {
+		return nil
+	}
+	return json.Unmarshal(b, out)
+}
+
+// GetText performs GET and returns the body as it came, for answers that are not JSON (a kubeconfig).
+func (c *Client) GetText(ctx context.Context, ep string) (string, error) {
+	u, err := c.buildURL(ep, nil)
+	if err != nil {
+		return "", err
+	}
+	b, _, err := c.doJSON(ctx, http.MethodGet, u, nil)
+	return string(b), err
+}
+
+// DeleteQuery performs DELETE with query parameters.
+func (c *Client) DeleteQuery(ctx context.Context, ep string, q url.Values) error {
+	u, err := c.buildURL(ep, q)
+	if err != nil {
+		return err
+	}
+	_, _, err = c.doJSON(ctx, http.MethodDelete, u, nil)
+	return err
 }
 
 // Delete performs DELETE request.

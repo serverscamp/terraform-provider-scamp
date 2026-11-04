@@ -54,14 +54,14 @@ type Router struct {
 
 // VMClass represents a VM class from the API.
 type VMClass struct {
-	ID                     int    `json:"id"`
-	Name                   string `json:"name"`
-	Description            string `json:"description"`
-	CPUCores               int    `json:"cpu_cores"`
-	CPUMinUsage            int    `json:"cpu_min_usage"`
-	CPUMaxUsage            int    `json:"cpu_max_usage"`
-	CheckPeriodMinutes     int    `json:"check_period_minutes"`
-	MemoryMB               int    `json:"memory_mb"`
+	ID                     int     `json:"id"`
+	Name                   string  `json:"name"`
+	Description            string  `json:"description"`
+	CPUCores               int     `json:"cpu_cores"`
+	CPUMinUsage            int     `json:"cpu_min_usage"`
+	CPUMaxUsage            int     `json:"cpu_max_usage"`
+	CheckPeriodMinutes     int     `json:"check_period_minutes"`
+	MemoryMB               int     `json:"memory_mb"`
 	PricePerHourMillicents float64 `json:"price_per_hour_millicents"`
 	IsActive               bool    `json:"is_active"`
 	CreatedAt              string  `json:"created_at,omitempty"`
@@ -76,17 +76,17 @@ type VMClassesListResponse struct {
 
 // StorageClass represents a storage class from the API.
 type StorageClass struct {
-	ID                       int    `json:"id"`
-	Name                     string `json:"name"`
-	Description              string `json:"description"`
-	MinSizeGB                int    `json:"min_size_gb"`
-	FreeSizeGB               int    `json:"free_size_gb"`
-	MaxSizeGB                int    `json:"max_size_gb"`
-	ReadIOPSLimit            int    `json:"read_iops_limit"`
-	WriteIOPSLimit           int    `json:"write_iops_limit"`
-	ReadBandwidthLimit       int    `json:"read_bandwidth_limit"`
-	WriteBandwidthLimit      int    `json:"write_bandwidth_limit"`
-	SDSPoolName              string `json:"sds_pool_name"`
+	ID                       int     `json:"id"`
+	Name                     string  `json:"name"`
+	Description              string  `json:"description"`
+	MinSizeGB                int     `json:"min_size_gb"`
+	FreeSizeGB               int     `json:"free_size_gb"`
+	MaxSizeGB                int     `json:"max_size_gb"`
+	ReadIOPSLimit            int     `json:"read_iops_limit"`
+	WriteIOPSLimit           int     `json:"write_iops_limit"`
+	ReadBandwidthLimit       int     `json:"read_bandwidth_limit"`
+	WriteBandwidthLimit      int     `json:"write_bandwidth_limit"`
+	SDSPoolName              string  `json:"sds_pool_name"`
 	ReplicaCount             int     `json:"replica_count"`
 	PricePerGBHourMillicents float64 `json:"price_per_gb_hour_millicents"`
 	IsActive                 bool    `json:"is_active"`
@@ -447,4 +447,169 @@ type StorageLogin struct {
 	Password  *string `json:"password"`
 	AccessKey *string `json:"access_key"`
 	S3Secret  *string `json:"s3_secret"`
+}
+
+type K8sVersion struct {
+	Version string `json:"version"`
+	Default bool   `json:"default"`
+}
+
+type K8sCatalog struct {
+	Versions []K8sVersion `json:"versions"`
+	Sizes    []struct {
+		AppSize
+		MemoryMB int64 `json:"memory_mb"`
+	} `json:"sizes"`
+}
+
+type K8sPool struct {
+	Name       string            `json:"name"`
+	VMClassID  int64             `json:"vm_class_id"`
+	Count      int64             `json:"count"`
+	Plan       *string           `json:"plan"`
+	MaxPods    int64             `json:"max_pods"`
+	MaxPodsSet bool              `json:"max_pods_set"`
+	Labels     map[string]string `json:"labels"`
+}
+
+type K8sNode struct {
+	Name  string  `json:"name"`
+	Pool  string  `json:"pool"`
+	State string  `json:"state"`
+	IP    *string `json:"ip"`
+}
+
+type K8sCluster struct {
+	ID            string    `json:"id"`
+	Name          string    `json:"name"`
+	Hostname      string    `json:"hostname"`
+	Version       string    `json:"version"`
+	NetworkUUID   string    `json:"network_uuid"`
+	State         string    `json:"state"`
+	Error         *string   `json:"error"`
+	APIURL        *string   `json:"api_url"`
+	APIPrivateURL *string   `json:"api_private_url"`
+	Nodes         int64     `json:"nodes"`
+	NodesReady    int64     `json:"nodes_ready"`
+	Pools         []K8sPool `json:"pools"`
+	NodeList      []K8sNode `json:"node_list"`
+	Storage       *struct {
+		ID string `json:"id"`
+	} `json:"storage"`
+}
+
+// ServicePlan is a plan of a managed database or a message broker.
+type ServicePlan struct {
+	ID             int64  `json:"id"`
+	Engine         string `json:"engine"`
+	Name           string `json:"name"`
+	DiskIncludedGB int64  `json:"disk_included_gb"`
+	DiskMaxGB      int64  `json:"disk_max_gb"`
+	SoldOut        bool   `json:"sold_out"`
+}
+
+type ServiceEngine struct {
+	Key            string   `json:"key"`
+	Versions       []string `json:"versions"`
+	DefaultVersion string   `json:"default_version"`
+	Available      bool     `json:"available"`
+	Creatable      *bool    `json:"creatable"`
+}
+
+type ServiceCatalog struct {
+	Engines []ServiceEngine `json:"engines"`
+	Plans   []ServicePlan   `json:"plans"`
+}
+
+type Database struct {
+	ID          string   `json:"id"`
+	Name        string   `json:"name"`
+	Engine      string   `json:"engine"`
+	Version     string   `json:"version"`
+	Plan        string   `json:"plan"`
+	DiskGB      int64    `json:"disk_gb"`
+	NetworkUUID string   `json:"network_uuid"`
+	State       string   `json:"state"`
+	Error       *string  `json:"error"`
+	Host        string   `json:"host"`
+	IP          *string  `json:"ip"`
+	Port        int64    `json:"port"`
+	PoolPort    *int64   `json:"pool_port"`
+	User        string   `json:"user"`
+	Database    *string  `json:"database"`
+	Durability  string   `json:"durability"`
+	Caps        []string `json:"capabilities"`
+	Public      struct {
+		Enabled    bool    `json:"enabled"`
+		RequireSSL bool    `json:"require_ssl"`
+		Host       *string `json:"host"`
+		Port       *int64  `json:"port"`
+	} `json:"public"`
+	Backup struct {
+		Enabled bool `json:"enabled"`
+	} `json:"backup"`
+	Options struct {
+		SGUUID   *string `json:"sg_uuid"`
+		PITRDays *int64  `json:"pitr_days"`
+	} `json:"options"`
+}
+
+type Broker struct {
+	ID          string  `json:"id"`
+	Name        string  `json:"name"`
+	Engine      string  `json:"engine"`
+	Version     string  `json:"version"`
+	Plan        *string `json:"plan"`
+	DiskGB      int64   `json:"disk_gb"`
+	State       string  `json:"state"`
+	Error       *string `json:"error"`
+	IP          *string `json:"ip"`
+	Port        *int64  `json:"port"`
+	User        string  `json:"user"`
+	NetworkUUID string  `json:"network_uuid"`
+	SGUUID      *string `json:"sg_uuid"`
+	RequireTLS  bool    `json:"require_tls"`
+	Public      struct {
+		Enabled bool    `json:"enabled"`
+		Host    *string `json:"host"`
+		Port    *int64  `json:"port"`
+	} `json:"public"`
+}
+
+type ServicePassword struct {
+	User     *string `json:"user"`
+	Password *string `json:"password"`
+}
+
+// DatabaseAccess is the users and databases of a database server (PostgreSQL, MySQL).
+type DatabaseAccess struct {
+	Owner string `json:"owner"`
+	Users []struct {
+		Name   string            `json:"name"`
+		Grants map[string]string `json:"grants"`
+	} `json:"users"`
+	Databases []struct {
+		Name    string  `json:"name"`
+		State   *string `json:"state"`
+		Default bool    `json:"default"`
+		Managed bool    `json:"managed"`
+	} `json:"databases"`
+	Applied bool     `json:"applied"`
+	Errors  []string `json:"errors"`
+}
+
+type BrokerUser struct {
+	Name      string   `json:"name"`
+	Publish   []string `json:"publish"`
+	Subscribe []string `json:"subscribe"`
+	JetStream bool     `json:"jetstream"`
+	VHost     *string  `json:"vhost"`
+	Level     *string  `json:"level"`
+	Topics    *string  `json:"topics"`
+}
+
+type BrokerUsers struct {
+	Engine string       `json:"engine"`
+	State  string       `json:"state"`
+	Users  []BrokerUser `json:"users"`
 }
