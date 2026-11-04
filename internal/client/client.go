@@ -32,6 +32,7 @@ const (
 	KubernetesEP     = "/kubernetes"
 	DatabasesEP      = "/databases"
 	BrokersEP        = "/brokers"
+	RegistryEP       = "/registry"
 )
 
 // Client wraps HTTP communication with the SCAMP API.

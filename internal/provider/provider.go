@@ -119,5 +119,7 @@ func (p *scampProvider) Resources(_ context.Context) []func() fwres.Resource {
 		NewDatabaseDBResource,
 		NewDatabaseUserResource,
 		NewBrokerUserResource,
+		NewRegistryResource,
+		NewRegistryUserResource,
 	}
 }

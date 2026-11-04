@@ -613,3 +613,30 @@ type BrokerUsers struct {
 	State  string       `json:"state"`
 	Users  []BrokerUser `json:"users"`
 }
+
+type RegistryGrant struct {
+	Repos string `json:"repos"`
+	Level string `json:"level"`
+}
+
+type RegistryUser struct {
+	Name     string          `json:"name"`
+	Access   []RegistryGrant `json:"access"`
+	Disabled bool            `json:"disabled"`
+}
+
+// Registry packages have the shape of Storage Box packages: slug, name, size.
+type Registry struct {
+	ID          string          `json:"id"`
+	Name        string          `json:"name"`
+	Host        string          `json:"host"`
+	State       string          `json:"state"`
+	Error       *string         `json:"error"`
+	IP          *string         `json:"ip"`
+	PrivateIP   *string         `json:"private_ip"`
+	Package     *StoragePackage `json:"package"`
+	GrowUpTo    *StoragePackage `json:"grow_up_to"`
+	Network     string          `json:"network_uuid"`
+	PublicRepos []string        `json:"public_repos"`
+	Users       []RegistryUser  `json:"users"`
+}
