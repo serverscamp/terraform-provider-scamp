@@ -640,3 +640,20 @@ type Registry struct {
 	PublicRepos []string        `json:"public_repos"`
 	Users       []RegistryUser  `json:"users"`
 }
+
+type EmailAddress struct {
+	ID             string  `json:"id"`
+	Address        string  `json:"address"`
+	Label          *string `json:"label"`
+	Disabled       bool    `json:"disabled"`
+	DisabledReason *string `json:"disabled_reason"`
+	PasswordKept   bool    `json:"password_kept"`
+}
+
+type EmailOverview struct {
+	Domain string `json:"domain"`
+	SMTP   struct {
+		Host string `json:"host"`
+	} `json:"smtp"`
+	Addresses []EmailAddress `json:"addresses"`
+}

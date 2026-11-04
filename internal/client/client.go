@@ -33,6 +33,7 @@ const (
 	DatabasesEP      = "/databases"
 	BrokersEP        = "/brokers"
 	RegistryEP       = "/registry"
+	EmailEP          = "/email"
 )
 
 // Client wraps HTTP communication with the SCAMP API.

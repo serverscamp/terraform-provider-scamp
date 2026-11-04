@@ -121,5 +121,6 @@ func (p *scampProvider) Resources(_ context.Context) []func() fwres.Resource {
 		NewBrokerUserResource,
 		NewRegistryResource,
 		NewRegistryUserResource,
+		NewEmailAddressResource,
 	}
 }
