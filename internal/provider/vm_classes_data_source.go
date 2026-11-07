@@ -23,7 +23,7 @@ func (d *vmClassesDataSource) Metadata(_ context.Context, _ fwds.MetadataRequest
 
 func (d *vmClassesDataSource) Schema(_ context.Context, _ fwds.SchemaRequest, resp *fwds.SchemaResponse) {
 	resp.Schema = dsschema.Schema{
-		Description: "Retrieves list of available VM classes (CPU, memory configurations).",
+		Description: "Lists the VM plans on sale (CPU, memory).",
 		Attributes: map[string]dsschema.Attribute{
 			"items": dsschema.ListNestedAttribute{
 				Computed:    true,
@@ -93,7 +93,7 @@ type vmClassesDataSourceModel struct {
 
 func (d *vmClassesDataSource) Read(ctx context.Context, req fwds.ReadRequest, resp *fwds.ReadResponse) {
 	var listResp models.VMClassesListResponse
-	err := d.c.GetJSON(ctx, client.VMClassesEP, nil, &listResp)
+	err := d.c.GetJSON(ctx, client.VMClassesEP, vmPlansOnSale, &listResp)
 	if err != nil {
 		resp.Diagnostics.AddError("Failed to read VM classes", err.Error())
 		return

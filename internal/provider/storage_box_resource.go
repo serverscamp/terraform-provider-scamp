@@ -104,7 +104,7 @@ func (r *storageBoxResource) Schema(_ context.Context, _ tfresource.SchemaReques
 				Description: "Protocols the box serves: s3, sftp, ftp, webdav. All of them by default. Changed in place.",
 			},
 			"host": rschema.StringAttribute{
-				Computed: true, Description: "The box's name in DNS, NAME-xxxxxx.storage.serverscamp.com.", PlanModifiers: keep,
+				Computed: true, Description: "The box's name in DNS, NAME-xxxxxx.s3.scamp.pro.", PlanModifiers: keep,
 			},
 			"s3_endpoint": rschema.StringAttribute{
 				Computed: true, Description: "S3 endpoint, https://HOST. Use path-style addressing.", PlanModifiers: keep,

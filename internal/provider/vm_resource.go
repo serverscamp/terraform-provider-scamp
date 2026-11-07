@@ -72,7 +72,7 @@ func (r *vmResource) ValidateConfig(ctx context.Context, req tfresource.Validate
 		case !hasName && !hasID:
 			resp.Diagnostics.AddError(
 				fmt.Sprintf("Neither %s nor %s is set", pair.nameAttr, pair.idAttr),
-				fmt.Sprintf("Set %s (recommended, e.g. vm_class = \"bs-burst-xs\") or %s.",
+				fmt.Sprintf("Set %s (recommended, e.g. vm_class = \"basic-1g\") or %s.",
 					pair.nameAttr, pair.idAttr),
 			)
 		}
@@ -109,7 +109,7 @@ func (r *vmResource) Schema(_ context.Context, _ tfresource.SchemaRequest, resp 
 			},
 			"vm_class": rschema.StringAttribute{
 				Optional:    true,
-				Description: "Name of the VM class, e.g. bs-burst-xs or hf-m. Use this or vm_class_id.",
+				Description: "Plan name, e.g. basic-1g or hf-4g-dedicated: one of the plans on sale. Use this or vm_class_id.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -125,7 +125,7 @@ func (r *vmResource) Schema(_ context.Context, _ tfresource.SchemaRequest, resp 
 			},
 			"root_disk_class": rschema.StringAttribute{
 				Optional:    true,
-				Description: "Name of the storage class for the root disk, e.g. R1. Use this or root_disk_class_id.",
+				Description: "Name of the storage class for the root disk, e.g. standard. Use this or root_disk_class_id.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -166,7 +166,7 @@ func (r *vmResource) Schema(_ context.Context, _ tfresource.SchemaRequest, resp 
 			},
 			"root_disk_gb": rschema.Int64Attribute{
 				Required:    true,
-				Description: "Root disk size in GB (10-1000).",
+				Description: "Root disk size in GB, from 25. The first 25 GB of a standard disk are free.",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.RequiresReplace(),
 				},

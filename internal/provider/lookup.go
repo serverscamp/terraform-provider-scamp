@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"regexp"
 	"sort"
 	"strings"
@@ -18,8 +19,8 @@ import (
 
 // Catalogue lookups by name.
 //
-// Every one of these exists so a config can say what it means - "bs-burst-xs",
-// "R1", "Ubuntu 26" - instead of an integer that means nothing on review and
+// Every one of these exists so a config can say what it means - "basic-1g",
+// "standard", "Ubuntu 26" - instead of an integer that means nothing on review and
 // changes between environments. The alternative was a data source per lookup,
 // which buries a three-line VM in twenty lines of plumbing.
 //
@@ -90,9 +91,17 @@ func pickByName(want string, names []string) (int, error) {
 	return pickByLabels(want, labels)
 }
 
+// VM plans by name come from the current line only (basic-*, hf-*), the plans
+// on sale. A VM read back maps its plan id over every line, so a machine on an
+// older plan refreshes and imports without a change.
+var (
+	vmPlansOnSale = url.Values{"line": {"v2"}}
+	vmPlansAll    = url.Values{"line": {"all"}}
+)
+
 func resolveVMClass(ctx context.Context, c *client.Client, name string) (int, error) {
 	var list models.VMClassesListResponse
-	if err := c.GetJSON(ctx, client.VMClassesEP, nil, &list); err != nil {
+	if err := c.GetJSON(ctx, client.VMClassesEP, vmPlansOnSale, &list); err != nil {
 		return 0, fmt.Errorf("could not read VM classes: %w", err)
 	}
 	names := make([]string, len(list.Items))
@@ -241,7 +250,7 @@ func stripPrefixLen(addr string) string {
 
 func nameForVMClass(ctx context.Context, c *client.Client, id int) string {
 	var list models.VMClassesListResponse
-	if err := c.GetJSON(ctx, client.VMClassesEP, nil, &list); err != nil {
+	if err := c.GetJSON(ctx, client.VMClassesEP, vmPlansAll, &list); err != nil {
 		return ""
 	}
 	for _, it := range list.Items {

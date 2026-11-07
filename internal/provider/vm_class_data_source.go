@@ -24,7 +24,7 @@ func (d *vmClassDataSource) Metadata(_ context.Context, _ fwds.MetadataRequest, 
 
 func (d *vmClassDataSource) Schema(_ context.Context, _ fwds.SchemaRequest, resp *fwds.SchemaResponse) {
 	resp.Schema = dsschema.Schema{
-		Description: "Find a VM class by name (e.g., 'small', 'medium', 'large').",
+		Description: "Find a VM plan on sale by name, e.g. basic-1g.",
 		Attributes: map[string]dsschema.Attribute{
 			"name": dsschema.StringAttribute{
 				Required:    true,
@@ -90,7 +90,7 @@ func (d *vmClassDataSource) Read(ctx context.Context, req fwds.ReadRequest, resp
 	name := config.Name.ValueString()
 
 	var listResp models.VMClassesListResponse
-	err := d.c.GetJSON(ctx, client.VMClassesEP, nil, &listResp)
+	err := d.c.GetJSON(ctx, client.VMClassesEP, vmPlansOnSale, &listResp)
 	if err != nil {
 		resp.Diagnostics.AddError("Failed to read VM classes", err.Error())
 		return

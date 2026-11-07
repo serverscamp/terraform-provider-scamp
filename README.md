@@ -26,9 +26,9 @@ provider "scamp" {
 
 resource "scamp_vm" "web" {
   display_name      = "web-1"
-  vm_class          = "bs-burst-xs"
+  vm_class          = "basic-1g"
   image             = "ubuntu-26.04"
-  root_disk_class   = "R1"
+  root_disk_class   = "standard"
   root_disk_gb      = 25
   assign_public_ips = true
 }
@@ -58,9 +58,9 @@ resource "scamp_network" "internal" {
 
 resource "scamp_vm" "web" {
   display_name      = "web-1"
-  vm_class          = "bs-burst-xs"
+  vm_class          = "basic-1g"
   image             = "ubuntu-26.04"
-  root_disk_class   = "R1"
+  root_disk_class   = "standard"
   root_disk_gb      = 25
   assign_public_ips = true
 }
@@ -75,7 +75,7 @@ resource "scamp_vm_network_attachment" "internal" {
 resource "scamp_volume" "data" {
   display_name   = "web-data"
   size_gb        = 100
-  storage_class  = "R2"
+  storage_class  = "standard"
   attached_vm_id = scamp_vm.web.id
 }
 

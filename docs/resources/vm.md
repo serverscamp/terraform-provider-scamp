@@ -17,9 +17,9 @@ Manages a virtual machine in SCAMP.
 # out loud. `terraform plan` lists the valid names when one does not match.
 resource "scamp_vm" "web" {
   display_name    = "web-1"
-  vm_class        = "bs-burst-xs"
+  vm_class        = "basic-1g"
   image           = "ubuntu-26.04"
-  root_disk_class = "R1"
+  root_disk_class = "standard"
   root_disk_gb    = 25
 
   # Public IPv4 + IPv6 on the VM itself. Leave it false for a private machine
@@ -40,7 +40,7 @@ output "web_ip" {
 
 ### Required
 
-- `root_disk_gb` (Number) Root disk size in GB (10-1000).
+- `root_disk_gb` (Number) Root disk size in GB, from 25. The first 25 GB of a standard disk are free.
 
 ### Optional
 
@@ -50,12 +50,12 @@ output "web_ip" {
 - `image` (String) OS image, by slug (ubuntu-26.04, debian-13) or display name (Ubuntu 26.04 LTS). Case does not matter, and a unique substring works. Use this or vm_template_id.
 - `os_password` (String, Sensitive) OS password (8-64 characters). Auto-generated if not provided.
 - `primary_network_id` (String) UUID of the network the VM sits on. Leave it out and the VM joins the organisation's default-network, the one provisioned with the account that cannot be deleted from the panel.
-- `root_disk_class` (String) Name of the storage class for the root disk, e.g. R1. Use this or root_disk_class_id.
+- `root_disk_class` (String) Name of the storage class for the root disk, e.g. standard. Use this or root_disk_class_id.
 - `root_disk_class_id` (Number) ID of the storage class for root disk (IOPS, bandwidth). Resolved from root_disk_class when that is set instead.
 - `security_group_id` (String) UUID of the security group the VM joins. Omit it and the platform picks the organisation's default group, which is what the panel does too. Changing it re-creates the VM: moving a running VM between groups is done through the security group itself, not from here. Not Computed on purpose - the API takes this on create but never reports it back on a VM, so an omitted value stays null instead of claiming a group we cannot verify.
 - `ssh_key_id` (Number) ID of the SSH key to inject.
 - `tags` (Map of String) Tags for the VM as key-value pairs (local only, not sent to API).
-- `vm_class` (String) Name of the VM class, e.g. bs-burst-xs or hf-m. Use this or vm_class_id.
+- `vm_class` (String) Plan name, e.g. basic-1g or hf-4g-dedicated: one of the plans on sale. Use this or vm_class_id.
 - `vm_class_id` (Number) ID of the VM class (CPU, memory configuration). Resolved from vm_class when that is set instead.
 - `vm_template_id` (Number) ID of the VM template (OS image). Resolved from image when that is set instead.
 

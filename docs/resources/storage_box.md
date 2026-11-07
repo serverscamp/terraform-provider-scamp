@@ -47,7 +47,7 @@ terraform {
     region = "us-east-1"
 
     endpoints = {
-      s3 = "https://tfstate-xxxxxx.storage.serverscamp.com" # s3_endpoint of the box
+      s3 = "https://tfstate-xxxxxx.s3.scamp.pro" # s3_endpoint of the box
     }
     use_path_style              = true
     use_lockfile                = true # lock file in the box, Terraform 1.10 and later
@@ -85,7 +85,7 @@ terraform init
 
 - `access_key` (String) S3 access key of the main user.
 - `bucket` (String) The box's one S3 bucket: storage.
-- `host` (String) The box's name in DNS, NAME-xxxxxx.storage.serverscamp.com.
+- `host` (String) The box's name in DNS, NAME-xxxxxx.s3.scamp.pro.
 - `id` (String) The box's id.
 - `ip` (String) Public address of the box.
 - `password` (String, Sensitive) Password of the main user for SFTP, FTPS and WebDAV.

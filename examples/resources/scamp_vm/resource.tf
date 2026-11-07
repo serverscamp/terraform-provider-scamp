@@ -2,9 +2,9 @@
 # out loud. `terraform plan` lists the valid names when one does not match.
 resource "scamp_vm" "web" {
   display_name    = "web-1"
-  vm_class        = "bs-burst-xs"
+  vm_class        = "basic-1g"
   image           = "ubuntu-26.04"
-  root_disk_class = "R1"
+  root_disk_class = "standard"
   root_disk_gb    = 25
 
   # Public IPv4 + IPv6 on the VM itself. Leave it false for a private machine

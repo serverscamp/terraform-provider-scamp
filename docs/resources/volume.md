@@ -16,7 +16,7 @@ Manages a volume (disk) in SCAMP.
 resource "scamp_volume" "data" {
   display_name  = "web-data"
   size_gb       = 100
-  storage_class = "R2"
+  storage_class = "standard"
 
   # Attaching is a field, not a separate resource: set it to attach, clear it
   # to detach. The disk keeps its data either way.
@@ -35,7 +35,7 @@ resource "scamp_volume" "data" {
 
 - `attached_vm_id` (String) UUID of the VM to attach the volume to. If not set, volume is created but not attached.
 - `display_name` (String) Display name of the volume (max 100 characters).
-- `storage_class` (String) Name of the storage class, e.g. R2 or W3. Case does not matter. Use this or storage_class_id.
+- `storage_class` (String) Name of the storage class, e.g. standard or enterprise-dedicated. Case does not matter. Use this or storage_class_id.
 - `storage_class_id` (Number) ID of the storage class. Resolved from storage_class when that is set instead.
 
 ### Read-Only

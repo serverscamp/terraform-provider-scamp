@@ -44,7 +44,7 @@ func (r *volumeResource) ValidateConfig(ctx context.Context, req tfresource.Vali
 	}
 	if !hasName && !hasID {
 		resp.Diagnostics.AddError("Neither storage_class nor storage_class_id is set",
-			"Set storage_class (recommended, e.g. storage_class = \"R2\") or storage_class_id.")
+			"Set storage_class (recommended, e.g. storage_class = \"standard\") or storage_class_id.")
 	}
 }
 
@@ -85,7 +85,7 @@ func (r *volumeResource) Schema(_ context.Context, _ tfresource.SchemaRequest, r
 			},
 			"storage_class": rschema.StringAttribute{
 				Optional:    true,
-				Description: "Name of the storage class, e.g. R2 or W3. Case does not matter. Use this or storage_class_id.",
+				Description: "Name of the storage class, e.g. standard or enterprise-dedicated. Case does not matter. Use this or storage_class_id.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},

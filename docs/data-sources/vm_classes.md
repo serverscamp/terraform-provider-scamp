@@ -3,12 +3,12 @@
 page_title: "scamp_vm_classes Data Source - scamp"
 subcategory: ""
 description: |-
-  Retrieves list of available VM classes (CPU, memory configurations).
+  Lists the VM plans on sale (CPU, memory).
 ---
 
 # scamp_vm_classes (Data Source)
 
-Retrieves list of available VM classes (CPU, memory configurations).
+Lists the VM plans on sale (CPU, memory).
 
 
 

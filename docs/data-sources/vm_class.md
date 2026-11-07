@@ -3,12 +3,12 @@
 page_title: "scamp_vm_class Data Source - scamp"
 subcategory: ""
 description: |-
-  Find a VM class by name (e.g., 'small', 'medium', 'large').
+  Find a VM plan on sale by name, e.g. basic-1g.
 ---
 
 # scamp_vm_class (Data Source)
 
-Find a VM class by name (e.g., 'small', 'medium', 'large').
+Find a VM plan on sale by name, e.g. basic-1g.
 
 
 
